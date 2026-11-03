@@ -1,0 +1,38 @@
+/** Mechanical gate tests, not model output or a semantic benchmark score. */
+import assert from 'node:assert/strict';
+const quality = await import('./memory-quality-cases.mjs').catch(() => ({}));
+assert.equal(typeof quality.scoreQuality, 'function', '需要可重复的记忆质量验收与拒绝假成功的评分器');
+assert.equal(quality.qualityCases.length, 4);
+const empty = quality.scoreQuality({ rounds: [] });
+assert.equal(empty.passed, false);
+assert.equal(empty.humanReviewRequired, true);
+const wordsOnly = quality.scoreQuality({ rounds: quality.qualityCases.map((item, i) => ({ index: i + 1, response: '记住了，夜班麦茶白天温水', memories: [], tools: [], exitCode: 0 })) });
+assert.equal(wordsOnly.passed, false, '仅口头承诺和关键词不能通过');
+const missingProvenance = quality.scoreQuality({ rounds: Array.from({ length: 4 }, (_, i) => ({ index: i + 1, exitCode: 0, memories: [{ status: 'active', content: '夜班无糖麦茶，白天温水，不喝含糖饮料', source: { kind: 'conversation', reference: 'made-up' } }], tools: [] })) });
+assert.equal(missingProvenance.checks.actualSourceReferences, false);
+assert.equal(missingProvenance.checks.actualFreshRecall, false);
+assert.equal(missingProvenance.passed, false);
+// Synthetic records below test only the scoring gate, never counted as model evidence.
+const source = { kind: 'conversation', reference: 'fixture#user' };
+const old = { id: 'old', status: 'archived', supersededBy: 'new', content: '测试者仅在值夜班时喝无糖乌龙茶', source };
+const day = { id: 'day', status: 'active', content: '测试者白天只喝温水', source };
+const noSugar = { id: 'noSugar', status: 'active', content: '测试者不喝含糖饮料', source };
+const changed = { id: 'new', status: 'active', content: '测试者值夜班时喝无糖麦茶', source };
+const fixture = { rounds: Array.from({ length: 4 }, (_, i) => ({ index: i + 1, exitCode: 0, response: '夜班麦茶，白天温水，不喝含糖饮料', tools: [], workerCalls: i, worker: { status: 'done' }, sourceReferences: [source.reference], memories: i < 3 ? [{ ...old, status: 'active' }, day, noSugar] : [old, day, noSugar, changed] })) };
+fixture.rounds.forEach((round, i) => { round.sessionId = `fixture-session-${i}`; if (i) { round.worker.jobId = `fixture-job-${i - 1}`; round.batches = { jobs: [{ id: round.worker.jobId, sessionId: fixture.rounds[i - 1].sessionId, status: 'done' }] }; } });
+fixture.rounds[3].tools.push({ name: 'love_recall', callId: 'fixture-call', input: {} });
+fixture.rounds[3].toolResults = [{ callId: 'fixture-call', status: 'completed', result: 'fixture recall' }];
+assert.equal(quality.scoreQuality(fixture).passed, true, '完整证据必须存在可通过路径');
+const failedMiddle = structuredClone(fixture); failedMiddle.rounds[2].worker.status = 'failed';
+assert.equal(quality.scoreQuality(failedMiddle).checks.actualBackgroundCalls, false, '中间批次失败不能当作整个链路成功');
+const failedRecall = structuredClone(fixture); failedRecall.rounds[3].toolResults[0].status = 'error';
+assert.equal(quality.scoreQuality(failedRecall).checks.actualFreshRecall, false, '有调用但结果失败不能称召回成功');
+const noCondition = structuredClone(fixture); noCondition.rounds[1].memories[0].content = '测试者喜欢乌龙茶';
+assert.equal(quality.scoreQuality(noCondition).checks.baselineConditions, false);
+const wrongOwner = structuredClone(fixture); wrongOwner.rounds[3].memories.push({ status: 'active', content: '测试者最喜欢焦糖拿铁', source });
+assert.equal(quality.scoreQuality(wrongOwner).checks.quotedPersonNotOwner, false);
+const hypothetical = structuredClone(fixture); hypothetical.rounds[3].memories.push({ status: 'active', content: '测试者已习惯喝冷萃咖啡', source });
+assert.equal(quality.scoreQuality(hypothetical).checks.hypotheticalNotCurrent, false);
+console.log('ok   质量验收门槛：缺真实调用、保存、来源与召回不能靠“记住了”或关键词通过；人工语义审计仍必需');
+await import('./verify-reflection-source-feedback.mjs');
+await import('./verify-reflection-ref-feedback.mjs');

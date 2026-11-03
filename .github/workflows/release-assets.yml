@@ -1,0 +1,57 @@
+name: release-assets
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  package:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 24
+
+      - name: Build npm tarball
+        # Release artifacts must use the same cold-install and verification gate.
+        # Ordinary development never triggers this workflow without a tag/manual action.
+        run: |
+          npm ci --ignore-scripts --no-audit --no-fund
+          npm run check:client
+          npm test
+          mkdir -p dist
+          npm pack --pack-destination dist
+
+      - name: Verify archive output
+        run: |
+          test -n "$(find dist -name '*.tgz' -print -quit)"
+
+      - name: Build source zip
+        run: |
+          mkdir -p dist
+          git archive --format=zip --output dist/love-suite-source.zip HEAD
+
+      - name: Copy bootstrap installer
+        run: cp install-from-release.ps1 dist/install-from-release.ps1
+
+      - name: Checksums
+        run: |
+          cd dist
+          sha256sum *.tgz love-suite-source.zip > SHA256SUMS.txt
+          cat SHA256SUMS.txt
+
+      - name: Upload to release
+        uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65 # v2
+        with:
+          files: |
+            dist/*.tgz
+            dist/love-suite-source.zip
+            dist/SHA256SUMS.txt
+            dist/install-from-release.ps1

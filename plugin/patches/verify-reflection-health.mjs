@@ -1,0 +1,28 @@
+/** Diagnostics must explain capture without retaining source text or other paths. */
+import assert from 'node:assert/strict';
+import path from 'node:path';
+const module = await import('../reflection-health.js').catch(() => ({}));
+assert.equal(typeof module.createReflectionHealth, 'function', '需要真实轮次接收诊断');
+let time = 1000;
+const monitor = module.createReflectionHealth({ now: () => time });
+const a = path.resolve('fixture-a'), b = path.resolve('fixture-b');
+assert.equal(monitor.describe(a).scopedTurns, 0);
+monitor.outside();
+monitor.record(a, { queued: 2, overflow: false, text: 'DO_NOT_STORE' });
+time++;
+monitor.record(a, { queued: 0 }, { collect: false });
+monitor.record(b, { queued: 1 });
+monitor.record(a, null, { error: new Error('SECRET_SOURCE_AND_PATH') });
+monitor.record(a, { queued: 0, overflow: true });
+const detail = monitor.describe(a);
+assert.equal(detail.scopedTurns, 4);
+assert.equal(detail.queuedBatches, 2);
+assert.equal(detail.disabledTurns, 1);
+assert.equal(detail.errorCount, 1);
+assert.equal(detail.overflowCount, 1);
+assert.equal(detail.outsideScopeTurns, 1);
+assert.equal(detail.lastQueuedAt, 1000);
+assert.equal(monitor.describe(b).queuedBatches, 1);
+assert.doesNotMatch(JSON.stringify(detail), /DO_NOT_STORE|SECRET_SOURCE_AND_PATH|fixture-b/);
+assert.equal(module.createReflectionHealth().describe(a).scopedTurns, 0, '新启动计数清零');
+console.log('ok   接收诊断：范围计数、关闭/错误/满载、重启清零，不保留正文和错误路径');

@@ -1,0 +1,602 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>记忆网络 · 动态测试</title>
+  <style>
+    html, body { margin: 0; height: 100%; background: #02040a; overflow: hidden; }
+    #graph { width: 100%; height: 100%; }
+    .hud { position: fixed; left: 22px; top: 18px; z-index: 5; color: #dfe8ff; font: 13px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", "Microsoft YaHei", sans-serif; pointer-events: none; }
+    .hud b { display: block; font-size: 16px; font-weight: 500; letter-spacing: .04em; }
+    .hud span { color: #7d8aa6; font-size: 11px; }
+    .hud .note { margin-top: 6px; color: #66738e; font-size: 11px; }
+    .back { position: fixed; right: 20px; top: 16px; z-index: 6; color: #b9c6e2; font: 12px sans-serif; text-decoration: none; border: 1px solid #ffffff1a; padding: 7px 11px; border-radius: 7px; background: #080c16aa; }
+    .core-labels { position: fixed; inset: 0; z-index: 4; pointer-events: none; }
+    @keyframes label-breathe { 0%, 100% { box-shadow: 0 0 5px #ffffff08, 0 0 8px currentColor; } 50% { box-shadow: 0 0 8px #ffffff12, 0 0 18px currentColor; } }
+    .core-label { position: absolute; transform: translate(-50%, -50%); padding: 4px 10px; border-radius: 6px; border: 1px solid #ffffff20; background: #070b14ed; font: 600 13px/1.2 -apple-system, "Microsoft YaHei", sans-serif; letter-spacing: .1em; white-space: nowrap; text-shadow: 0 0 14px currentColor; backdrop-filter: blur(5px); animation: label-breathe 2.8s ease-in-out infinite; }
+  </style>
+</head>
+<body>
+  <div class="hud"><b>记忆网络 · 动态测试</b><span>记忆持续注入 · 左键旋转 · 滚轮缩放 · 中键平移</span><div class="note" id="note">初始化：3 个核心，等待记忆注入…</div></div>
+  <a class="back" href="./">回主视图</a>
+  <div class="core-labels" id="core-labels"></div>
+  <div id="graph"></div>
+  <script src="vendor/three.min.js"></script>
+<script src="vendor/3d-force-graph.min.js"></script>
+  <script type="module">
+    // Hover transitions follow org-roam-ui's 360ms eased neighbourhood highlight.
+// This module uses the existing graph objects so layout and particles keep running.
+function createGraphEffects(getData) {
+  let hoveredId = null;
+  let relatedIds = new Set();
+  let hoveredLinks = new Set();
+  let previousTime = 0;
+  const nodeLevels = new WeakMap();
+  const endpointId = (endpoint) => typeof endpoint === 'object' ? endpoint?.id : endpoint;
+
+  function setHover(node) {
+    hoveredId = node?.id ?? null;
+    relatedIds = new Set(hoveredId === null ? [] : [hoveredId]);
+    hoveredLinks = new Set();
+    if (hoveredId === null) return;
+    for (const link of getData().links) {
+      if (link.visible === false) continue;
+      const source = endpointId(link.source), target = endpointId(link.target);
+      if (source !== hoveredId && target !== hoveredId) continue;
+      relatedIds.add(source); relatedIds.add(target); hoveredLinks.add(link);
+    }
+  }
+
+  function update(time, enabled = true) {
+    const dt = Math.min(50, previousTime ? time - previousTime : 16);
+    previousTime = time;
+    if (!enabled) return;
+    const blend = 1 - Math.exp(-dt / 90);
+    const data = getData();
+    for (const node of data.nodes) {
+      const object = node.__threeObj;
+      if (!object) continue;
+      const target = relatedIds.has(node.id) ? 1 : 0;
+      const previous = nodeLevels.get(object) || 0;
+      const level = previous + (target - previous) * blend;
+      object.scale.setScalar((node.__breathScale || 1) * (1 + level * (node.id === hoveredId ? 0.18 : 0.08)));
+      nodeLevels.set(object, level);
+    }
+    for (const link of data.links) {
+      const target = hoveredId === null ? 0 : hoveredLinks.has(link) ? 0.45 : -0.55;
+      const previous = link.__hoverLevel || 0;
+      link.__hoverLevel = previous + (target - previous) * blend;
+    }
+  }
+
+  return { setHover, update };
+}
+
+    const COLORS = {
+      user: '#ffd86b', project: '#7ef0c8', lesson: '#66e0ff', rules: '#ff9f6b',
+      fact: '#b5a2ff', topic: '#ff9fc4', soul: '#ffd9a8',
+      journal: '#a78bfa', life: '#8fe3c0', entity: '#ff7fa8', episode: '#ffb86b',
+      group: '#ffb86b', member: '#66e0ff', groupNote: '#ff9fc4',
+    };
+    const demo = new URLSearchParams(location.search).get('demo') || 'brain';
+    const note = document.getElementById('note');
+    const labelBox = document.getElementById('core-labels');
+
+    const regions = [
+      { name: '自我', color: '#ffd9a8', tags: ['自己', '身份', '边界'], initial: true, count: 18 },
+      { name: '情绪', color: '#ff7fa8', tags: ['开心', '难过', '焦虑'], initial: false, count: 22 },
+      { name: '关系', color: '#66e0ff', tags: ['对方', '聊天', '信任'], initial: false, count: 20 },
+      { name: '工作', color: '#4f8cff', tags: ['项目', '任务', '会议'], initial: false, count: 24 },
+      { name: '日常', color: '#7ef0c8', tags: ['吃饭', '睡觉', '出门'], initial: false, count: 22 },
+      { name: '记忆', color: '#a78bfa', tags: ['以前', '记得', '那次'], initial: false, count: 24 },
+      { name: '群聊', color: '#ffb86b', tags: ['群友', '群里', '大家'], initial: false, count: 20 },
+      { name: '学习', color: '#b6e36b', tags: ['阅读', '练习', '发现'], initial: false, count: 28 },
+      { name: '兴趣', color: '#f48fff', tags: ['音乐', '游戏', '创作'], initial: false, count: 26 },
+      { name: '家庭', color: '#ff916e', tags: ['家人', '陪伴', '小时候'], initial: false, count: 28 },
+    ];
+    // The demo's seeded semantic associations connect branch cores only.
+    const demoCoreAssociations = new Map([
+      [1, [2, 5]], [2, [6]], [3, [4, 7]], [4, [9]], [7, [8]],
+    ]);
+    const demoCorePairKeys = new Set();
+
+    const graphData = { nodes: [], links: [] };
+    const labels = [];
+    const regionData = new Map();
+    const coreByRegion = new Map();
+    const usedCorePoints = [];
+    let Graph;
+    let memorySequence = 0;
+    let userMovedCamera = false;
+
+    function randomPoint(index) {
+      if (index === 0) return { x: 0, y: 0, z: 0 };
+      // Keep branch cores well separated around the self core.
+      for (let attempt = 0; attempt < 360; attempt += 1) {
+        const direction = randomDirection3D();
+        const radius = Math.cbrt(480 ** 3 + Math.random() * (900 ** 3 - 480 ** 3));
+        const point = { x: direction.x * radius, y: direction.y * radius, z: direction.z * radius };
+        if (usedCorePoints.every((other) => Math.hypot(point.x - other.x, point.y - other.y, point.z - other.z) > 400)) return point;
+      }
+      const direction = randomDirection3D();
+      const radius = 900 + Math.random() * 100 + index * 3;
+      return { x: direction.x * radius, y: direction.y * radius, z: direction.z * radius };
+    }
+
+    function addLabel(core) {
+      const el = document.createElement('div');
+      el.className = 'core-label'; el.style.color = core.color; el.textContent = core.label;
+      labelBox.append(el); labels.push({ el, core });
+    }
+
+    function newCore(index) {
+      if (coreByRegion.has(index)) return coreByRegion.get(index);
+      const region = regions[index];
+      const point = randomPoint(index); usedCorePoints.push(point);
+      const core = { id: 'core:' + index, label: region.name, color: region.color, size: index === 0 ? 52 : 38, core: true, region: index,
+        visible: true, x: point.x, y: point.y, z: point.z, fx: point.x, fy: point.y, fz: point.z };
+      core.__homePosition = { x: point.x, y: point.y, z: point.z };
+      const selfCore = coreByRegion.get(0);
+      if (index !== 0 && selfCore) {
+        graphData.links.push({ source: selfCore.id, target: core.id, color: region.color, kind: 'coreBridge', region: index });
+      }
+      graphData.nodes.push(core); coreByRegion.set(index, core);
+      regionData.set(index, { core, nodes: [], links: [], tagCounts: new Map() });
+      addLabel(core);
+      return core;
+    }
+
+    function connectDemoCores(index) {
+      const related = new Set(demoCoreAssociations.get(index) || []);
+      for (const [sourceIndex, targetIndexes] of demoCoreAssociations) {
+        if (targetIndexes.includes(index)) related.add(sourceIndex);
+      }
+      for (const otherIndex of related) {
+        const left = coreByRegion.get(Math.min(index, otherIndex));
+        const right = coreByRegion.get(Math.max(index, otherIndex));
+        if (!left || !right) continue;
+        const key = `${left.region}:${right.region}`;
+        if (demoCorePairKeys.has(key)) continue;
+        demoCorePairKeys.add(key);
+        graphData.links.push({ source: left.id, target: right.id, color: '#e8ddff', kind: 'coreAssociation', relationCount: 1, label: '主题关联', visible: true });
+      }
+    }
+
+    function updateHud() {
+      const count = graphData.nodes.filter((n) => n.visible && !n.core).length;
+      const coreLinks = graphData.links.filter((link) => link.kind === 'coreBridge' || link.kind === 'coreAssociation').length;
+      const starLinks = graphData.links.filter((link) => link.kind === 'memoryAssociation').length;
+      note.textContent = coreByRegion.size + ' 个核心 · ' + count + ' 条记忆 · ' + coreLinks + ' 条核心连线 · ' + starLinks + ' 条星间连线 · 记忆持续注入';
+    }
+
+    function hashPhase(value) {
+      let hash = 2166136261;
+      for (let i = 0; i < value.length; i += 1) hash = Math.imul(hash ^ value.charCodeAt(i), 16777619);
+      hash = Math.imul(hash ^ (hash >>> 16), 0x85ebca6b);
+      hash = Math.imul(hash ^ (hash >>> 13), 0xc2b2ae35);
+      hash ^= hash >>> 16;
+      return (hash >>> 0) / 4294967295 * Math.PI * 2;
+    }
+
+    function randomDirection3D() {
+      const y = Math.random() * 2 - 1;
+      const angle = Math.random() * Math.PI * 2;
+      const planar = Math.sqrt(1 - y * y);
+      return { x: planar * Math.cos(angle), y, z: planar * Math.sin(angle) };
+    }
+
+    function branchDirection3D(slot, branchKey) {
+      // Golden-angle samples cover the whole sphere as memories arrive, instead of
+      // allowing a short random sample to collapse into one fan-shaped hemisphere.
+      const fraction = ((slot + 0.5) * 0.7548776662466927) % 1;
+      const y = 1 - 2 * fraction;
+      const planar = Math.sqrt(Math.max(0, 1 - y * y));
+      const phase = hashPhase(String(branchKey));
+      const angle = slot * 2.399963229728653 + phase;
+      const x0 = planar * Math.cos(angle);
+      const z0 = planar * Math.sin(angle);
+      const tilt = Math.sin(phase * 1.71) * 0.72;
+      const yaw = hashPhase(String(branchKey) + ':yaw');
+      const y1 = y * Math.cos(tilt) - z0 * Math.sin(tilt);
+      const z1 = y * Math.sin(tilt) + z0 * Math.cos(tilt);
+      const jitter = () => (Math.random() - 0.5) * 0.16;
+      const x = x0 * Math.cos(yaw) + z1 * Math.sin(yaw) + jitter();
+      const yy = y1 + jitter();
+      const z = -x0 * Math.sin(yaw) + z1 * Math.cos(yaw) + jitter();
+      const length = Math.hypot(x, yy, z) || 1;
+      return { x: x / length, y: yy / length, z: z / length };
+    }
+
+    const branchPulls = new Map();
+
+    function moveWithDamping(node, x, y, z, dt) {
+      // Velocity belongs to our small spring solver, independently of d3's layout.
+      const state = node.__elastic ??= { x: 0, y: 0, z: 0 };
+      const steps = Math.max(1, Math.ceil(dt / (1 / 120)));
+      const step = dt / steps;
+      const drag = Math.exp(-5.5 * step);
+      const stiffness = node.core ? 15 : 18;
+      for (let i = 0; i < steps; i += 1) {
+        state.x = (state.x + (x - node.x) * stiffness * step) * drag;
+        state.y = (state.y + (y - node.y) * stiffness * step) * drag;
+        state.z = (state.z + (z - node.z) * stiffness * step) * drag;
+        node.x += state.x * step;
+        node.y += state.y * step;
+        node.z += state.z * step;
+      }
+      node.fx = node.x; node.fy = node.y; node.fz = node.z;
+      node.vx = 0; node.vy = 0; node.vz = 0;
+    }
+
+    function startElasticDrag(node) {
+      node.__manualDragging = true;
+      branchPulls.set(node.region, node);
+    }
+
+    function endElasticDrag(node) {
+      node.__manualDragging = false;
+      if (branchPulls.get(node.region) === node) branchPulls.delete(node.region);
+      // Keep the original home/ambient anchor: release must return, never rebase.
+      node.fx = node.x; node.fy = node.y; node.fz = node.z;
+    }
+
+    // Breathing supplies moving targets; springs give the stars lag and recovery.
+    function updateBranchStar(node, core, seconds, dt) {
+      if (node.__manualDragging) return;
+      if (node.core) {
+        const home = node.__homePosition;
+        if (home) moveWithDamping(node, home.x, home.y, home.z, dt);
+        return;
+      }
+      const base = node.__ambientBase;
+      if (!base || !core) return;
+      base.cx ??= core.x; base.cy ??= core.y; base.cz ??= core.z;
+      const dx = base.x - base.cx, dy = base.y - base.cy, dz = base.z - base.cz;
+      const radius = Math.hypot(dx, dy, dz) || 1;
+      const phase = base.phase;
+      const branchPhase = core.__breathPhase ??= hashPhase('breath:' + core.id);
+      const breath = Math.sin(seconds * Math.PI * 2 / 8.5 + branchPhase);
+      const wave = Math.sin(seconds * 0.64 + phase + radius * 0.012);
+      const stretch = 1 + breath * 0.36 + wave * 0.055;
+      const amplitude = node.isSelfStar ? 17 : 22;
+      // Different smooth local waves flex the connecting strands without jitter.
+      const wx = Math.sin(seconds * 0.57 + phase) * amplitude;
+      const wy = Math.sin(seconds * 0.43 + phase * 1.41) * amplitude;
+      const wz = Math.cos(seconds * 0.51 + phase * 0.77) * amplitude;
+      const radial = (wx * dx + wy * dy + wz * dz) / (radius * radius);
+      const target = node.__motionTarget ??= { x: 0, y: 0, z: 0 };
+      target.x = core.x + dx * stretch + wx - dx * radial;
+      target.y = core.y + dy * stretch + wy - dy * radial;
+      target.z = core.z + dz * stretch + wz - dz * radial;
+      let pullX = 0, pullY = 0, pullZ = 0;
+      const pulled = branchPulls.get(node.region);
+      if (pulled && !pulled.core && pulled.__motionTarget && pulled.__ambientBase) {
+        const rest = pulled.__ambientBase;
+        const distance = Math.hypot(base.x - rest.x, base.y - rest.y, base.z - rest.z);
+        const weight = 0.35 * Math.exp(-distance / 180);
+        pullX = (pulled.x - pulled.__motionTarget.x) * weight;
+        pullY = (pulled.y - pulled.__motionTarget.y) * weight;
+        pullZ = (pulled.z - pulled.__motionTarget.z) * weight;
+      }
+      moveWithDamping(node, target.x + pullX, target.y + pullY, target.z + pullZ, dt);
+      node.__breathScale = 1 + breath * 0.30 + wave * 0.035;
+    }
+
+    let motionSeconds = 0;
+    // Straight links and travelling particles, batched into two draw calls.
+    function createBatchedFlow(Graph, getData) {
+      const lineGeometry = new THREE.BufferGeometry();
+      const particleGeometry = new THREE.BufferGeometry();
+      const lineMaterial = new THREE.LineBasicMaterial({ vertexColors: true, transparent: true, opacity: 0.66, depthWrite: false });
+      const dot = document.createElement('canvas'); dot.width = dot.height = 32;
+      const context = dot.getContext('2d');
+      const gradient = context.createRadialGradient(16, 16, 0, 16, 16, 16);
+      gradient.addColorStop(0, '#ffffff'); gradient.addColorStop(0.25, '#ffffff');
+      gradient.addColorStop(0.5, '#ffffff99'); gradient.addColorStop(1, '#ffffff00');
+      context.fillStyle = gradient; context.fillRect(0, 0, 32, 32);
+      const texture = new THREE.CanvasTexture(dot);
+      const particleMaterial = new THREE.PointsMaterial({ map: texture, color: '#c5f9ff', size: 6, sizeAttenuation: false, transparent: true, opacity: 0.95, blending: THREE.AdditiveBlending, depthWrite: false });
+      const lines = new THREE.LineSegments(lineGeometry, lineMaterial);
+      const particles = new THREE.Points(particleGeometry, particleMaterial);
+      lines.frustumCulled = particles.frustumCulled = false;
+      lines.raycast = particles.raycast = () => {};
+      Graph.scene().add(lines, particles);
+      let lastLinks, lastCount = -1;
+      let positions, colors, photons;
+      const scratchColor = new THREE.Color();
+      const colorCache = new Map();
+      function update(seconds) {
+        const data = getData();
+        if (lastLinks !== data.links || lastCount !== data.links.length) {
+          lastLinks = data.links; lastCount = data.links.length;
+          lineGeometry.dispose(); particleGeometry.dispose();
+          positions = new Float32Array(lastCount * 6);
+          colors = new Float32Array(lastCount * 6);
+          photons = new Float32Array(lastCount * 6);
+          lineGeometry.setAttribute('position', new THREE.BufferAttribute(positions, 3).setUsage(THREE.DynamicDrawUsage));
+          lineGeometry.setAttribute('color', new THREE.BufferAttribute(colors, 3).setUsage(THREE.DynamicDrawUsage));
+          particleGeometry.setAttribute('position', new THREE.BufferAttribute(photons, 3).setUsage(THREE.DynamicDrawUsage));
+        }
+        let lineCount = 0, particleCount = 0;
+        for (let index = 0; index < data.links.length; index += 1) {
+          const link = data.links[index];
+          const source = link.source, target = link.target;
+          if (link.visible === false || !source || !target || source.visible === false || target.visible === false || !Number.isFinite(source.x) || !Number.isFinite(target.x)) continue;
+          const offset = lineCount * 6;
+          positions[offset] = source.x; positions[offset + 1] = source.y; positions[offset + 2] = source.z;
+          positions[offset + 3] = target.x; positions[offset + 4] = target.y; positions[offset + 5] = target.z;
+          const key = link.color || '#91b6d6';
+          let color = colorCache.get(key);
+          if (!color) { scratchColor.set(key); color = [scratchColor.r, scratchColor.g, scratchColor.b]; colorCache.set(key, color); }
+          const coreLink = link.kind === 'coreBridge' || link.kind === 'coreAssociation';
+          const brightness = (coreLink ? 1 : 0.72) * (1 + (link.__hoverLevel || 0));
+          for (let end = 0; end < 2; end += 1) {
+            for (let axis = 0; axis < 3; axis += 1) colors[offset + end * 3 + axis] = Math.min(1, color[axis] * brightness);
+          }
+          lineCount += 1;
+          const count = coreLink ? 2 : 1;
+          for (let particle = 0; particle < count; particle += 1) {
+            const progress = (seconds / 9 + index * 0.61803398875 + particle / count) % 1;
+            const at = particleCount++ * 3;
+            photons[at] = source.x + (target.x - source.x) * progress;
+            photons[at + 1] = source.y + (target.y - source.y) * progress;
+            photons[at + 2] = source.z + (target.z - source.z) * progress;
+          }
+        }
+        lineGeometry.setDrawRange(0, lineCount * 2);
+        particleGeometry.setDrawRange(0, particleCount);
+        lineGeometry.attributes.position.needsUpdate = true;
+        lineGeometry.attributes.color.needsUpdate = true;
+        particleGeometry.attributes.position.needsUpdate = true;
+      }
+      return { update };
+    }
+
+
+    function syncGraphData() {
+      if (!Graph) return;
+      const nodesById = new Map(graphData.nodes.map((node) => [node.id, node]));
+      for (const link of graphData.links) {
+        if (typeof link.source !== 'object') link.source = nodesById.get(link.source);
+        if (typeof link.target !== 'object') link.target = nodesById.get(link.target);
+      }
+      // A fresh object and fresh arrays are required for ForceGraph's change detection.
+      Graph.graphData({ nodes: graphData.nodes.slice(), links: graphData.links.slice() });
+    }
+
+    function ensureCore(index, refresh = true) {
+      if (coreByRegion.has(index)) return coreByRegion.get(index);
+      const core = newCore(index);
+      connectDemoCores(index);
+      if (refresh && Graph) { syncGraphData(); Graph.d3ReheatSimulation(); }
+      updateHud();
+      return core;
+    }
+
+    function addMemory(index, tag, sequence) {
+      const core = ensureCore(index, false);
+      const data = regionData.get(index);
+      const siblings = data.nodes;
+      const direction = branchDirection3D(siblings.length, regions[index].name);
+      const radius = index === 0 ? 96 + Math.random() * 62 : 145 + Math.random() * 70;
+      const x = core.x + direction.x * radius;
+      const y = core.y + direction.y * radius;
+      const z = core.z + direction.z * radius;
+      const node = { id: 'm:' + memorySequence++, label: regions[index].name + ' · ' + tag, color: regions[index].color,
+        size: index === 0 ? 6.2 : 1.4 + Math.random() * 1.8, region: index, isSelfStar: index === 0, tags: [tag, regions[index].name], sequence, visible: true,
+        x, y, z, fx: x, fy: y, fz: z };
+      node.__ambientBase = { x: node.x, y: node.y, z: node.z, phase: hashPhase(node.id), cx: core.x, cy: core.y, cz: core.z };
+      const link = { source: core.id, target: node.id, color: regions[index].color, kind: 'branchMemory', region: index, visible: true };
+      graphData.nodes.push(node); graphData.links.push(link); siblings.push(node);
+      data.links.push(link); data.tagCounts.set(tag, (data.tagCounts.get(tag) || 0) + 1);
+      // Similar memories form a small local web inside their own branch.
+      // Stars in different branches never connect directly.
+      const earlier = siblings.slice(0, -1);
+      const sameTagPeer = earlier.filter((item) => item.tags[0] === tag).at(-1);
+      const distanceToNode = (item) => Math.hypot(item.x - node.x, item.y - node.y, item.z - node.z);
+      const nearbyPeer = earlier.filter((item) => item !== sameTagPeer).sort((a, b) => distanceToNode(a) - distanceToNode(b))[0];
+      const peers = [...new Set([sameTagPeer, nearbyPeer || earlier.at(-1)].filter(Boolean))];
+      for (const peer of peers) {
+        const starLink = { source: peer.id, target: node.id, color: regions[index].color, kind: 'memoryAssociation', region: index, visible: true };
+        graphData.links.push(starLink); data.links.push(starLink);
+      }
+      updateHud();
+    }
+
+    // Replaceable ingestion boundary for real journal/life/learning/network events.
+    function ingestMemories(items) {
+      for (const item of items) addMemory(item.region, item.tag, item.sequence ?? memorySequence);
+      if (Graph && items.length) {
+        syncGraphData();
+        Graph.d3ReheatSimulation();
+        setTimeout(addGlow, 350);
+      }
+    }
+
+    function updateLabels() {
+      const selfCore = coreByRegion.get(0);
+      const center = selfCore ? Graph.graph2ScreenCoords(selfCore.x, selfCore.y, selfCore.z) : null;
+      for (const { el, core } of labels) {
+        if (!Number.isFinite(core.x)) continue;
+        const pos = Graph.graph2ScreenCoords(core.x, core.y, core.z);
+        // Keep every core name present; cores behind the camera are dimmed rather than hidden.
+        el.style.display = '';
+        el.style.opacity = pos.z > 1 ? '0.48' : '1';
+        // Place labels just outside each core. Radial offsets separate nearby labels and
+        // are recomputed from the live projection without frame-to-frame collision shuffling.
+        let dx = 0, dy = 26;
+        if (core.region !== 0 && center) {
+          const angle = Math.atan2(pos.y - center.y, pos.x - center.x) + (core.region % 2 ? 0.14 : -0.14);
+          dx = Math.cos(angle) * 25;
+          dy = Math.sin(angle) * 25;
+        }
+        el.style.left = (pos.x + dx) + 'px';
+        el.style.top = (pos.y + dy) + 'px';
+      }
+    }
+
+    for (let i = 0; i < regions.length; i += 1) if (regions[i].initial) newCore(i);
+    updateHud();
+
+    Graph = ForceGraph3D()(document.getElementById('graph'))
+      .backgroundColor('#02040a')
+      .graphData(graphData)
+      .nodeId('id')
+      .nodeLabel((node) => node.label || node.id)
+      .nodeColor((node) => node.color || '#b5a2ff')
+      .nodeVal((node) => node.size || 2)
+      .nodeRelSize(2.7)
+      .nodeResolution(12)
+      .nodeOpacity(0.96)
+      .linkColor((link) => link.color || '#8fb6ff')
+      // ForceGraph accepts a numeric opacity; an accessor makes photon opacity NaN.
+      .linkOpacity(0.8)
+      .linkWidth(0)
+      .linkVisibility(false)
+      .linkDirectionalParticles(0)
+      .linkCurvature(0)
+      .onNodeDrag(startElasticDrag)
+      .onNodeDragEnd(endElasticDrag)
+      .enableNodeDrag(true);
+
+    const graphEffects = createGraphEffects(() => graphData);
+    const batchedFlow = createBatchedFlow(Graph, () => graphData);
+    Graph.renderer().setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.5));
+    Graph.onNodeHover((node) => {
+      graphEffects.setHover(node);
+      Graph.renderer().domElement.style.cursor = node ? 'pointer' : 'grab';
+    });
+
+    for (const force of ['charge', 'link', 'center']) Graph.d3Force(force, null);
+    Graph.cooldownTicks(Infinity).cooldownTime(Infinity);
+    const controls = Graph.controls();
+    controls.enableDamping = false;
+    controls.dampingFactor = 0.08;
+    controls.autoRotate = false;
+    controls.rotateSpeed = 0.9;
+    controls.zoomSpeed = 0.95;
+    controls.panSpeed = 1.1;
+    controls.screenSpacePanning = true;
+    controls.minDistance = 140;
+    controls.maxDistance = 3400;
+    if ('zoomToCursor' in controls) controls.zoomToCursor = true;
+    controls.addEventListener('start', () => { userMovedCamera = true; });
+    const graphCanvas = Graph.renderer().domElement;
+    graphCanvas.addEventListener('mousedown', (event) => { if (event.button === 1) event.preventDefault(); }, true);
+    graphCanvas.addEventListener('auxclick', (event) => { if (event.button === 1) event.preventDefault(); }, true);
+    graphCanvas.addEventListener('mouseup', (event) => { if (event.button === 1) event.preventDefault(); }, true);
+
+    Graph.cameraPosition({ x: 60, y: 180, z: 720 }, { x: 0, y: 0, z: 0 }, 0);
+
+    const glowObjects = [];
+    function addGlow() {
+      for (const node of graphData.nodes) {
+        const object = node.__threeObj;
+        if (!object || object.__glow || !object.material || (!node.core && !node.isSelfStar)) continue;
+        try {
+          if ((node.core || node.isSelfStar) && object.material.emissive) {
+            object.material.emissive.set(node.color);
+            object.material.emissiveIntensity = node.core ? 1.05 : 0.84;
+          }
+          const material = object.material.clone();
+          material.transparent = true;
+          material.opacity = node.core ? 0.38 : node.isSelfStar ? 0.3 : 0.11;
+          material.blending = 2;
+          material.depthWrite = false;
+          const halo = new object.constructor(object.geometry, material);
+          halo.scale.setScalar(node.core ? 4.8 : node.isSelfStar ? 2.6 : 1.9);
+          object.add(halo);
+          object.__glow = true;
+          glowObjects.push({ halo, base: halo.scale.x, phase: Math.random() * Math.PI * 2, core: node.core, selfStar: node.isSelfStar });
+        } catch (error) {
+          // 自定义节点对象不支持克隆时跳过
+        }
+      }
+    }
+
+    function fitView() {
+      const points = graphData.nodes.filter((node) => node.visible !== false && Number.isFinite(node.x));
+      if (!points.length) return;
+      const root = coreByRegion.get(0);
+      const center = root ? { x: root.x, y: root.y, z: root.z } : { x: 0, y: 0, z: 0 };
+      let radius = 0;
+      for (const node of points) radius = Math.max(radius, Math.hypot(node.x - center.x, node.y - center.y, node.z - center.z));
+      const distance = Math.max(1800, radius * 2.35);
+      const yaw = Math.random() * Math.PI * 2;
+      const vertical = 0.24 + Math.random() * 0.42;
+      const horizontal = Math.sqrt(1 - vertical * vertical);
+      Graph.cameraPosition({
+        x: center.x + Math.cos(yaw) * distance * horizontal,
+        y: center.y + distance * vertical,
+        z: center.z + Math.sin(yaw) * distance * horizontal,
+      }, center, 700);
+    }
+
+    let previousFrameTime = 0;
+    const camera = Graph.camera();
+    function frame(time) {
+      const dt = Math.min(50, previousFrameTime ? time - previousFrameTime : 16);
+      const priorTime = previousFrameTime || time;
+      controls.update();
+      const target = controls.target;
+      {
+        const angle = dt * (0.000009 + 0.000002 * Math.sin(time * 0.00012));
+        const dx = camera.position.x - target.x;
+        const dz = camera.position.z - target.z;
+        const cosine = Math.cos(angle), sine = Math.sin(angle);
+        camera.position.x = target.x + dx * cosine - dz * sine;
+        camera.position.z = target.z + dx * sine + dz * cosine;
+      }
+      const pitch = Math.sin(time * 0.0003) * 38;
+      const previousPitch = Math.sin(priorTime * 0.0003) * 38;
+      camera.position.y += pitch - previousPitch;
+      motionSeconds += dt / 1000;
+      for (const node of graphData.nodes) {
+        updateBranchStar(node, coreByRegion.get(node.region), motionSeconds, dt / 1000);
+      }
+      camera.lookAt(target);
+      camera.updateMatrixWorld();
+      previousFrameTime = time;
+      updateLabels();
+      graphEffects.update(time);
+      batchedFlow.update(motionSeconds);
+      for (const item of glowObjects) {
+        const amplitude = item.core ? 0.2 : item.selfStar ? 0.16 : 0.08;
+        const scale = item.base * (1 + amplitude * Math.sin(time * (item.core ? 0.0015 : 0.0011) + item.phase));
+        item.halo.scale.setScalar(scale);
+      }
+      requestAnimationFrame(frame);
+    }
+    requestAnimationFrame(frame);
+    setTimeout(addGlow, 600);
+
+    let initialFitDone = false;
+    Graph.onEngineStop(updateLabels);
+    // demo injects realistic-sized batches through the same public ingestion boundary.
+    if (demo === 'brain') {
+      let seq = 0;
+      const inject = (index, count) => {
+        const batch = [];
+        for (let i = 0; i < count; i += 1) {
+          const region = regions[index];
+          const tag = region.tags[(seq + i * 7 + Math.floor(Math.random() * region.tags.length)) % region.tags.length];
+          batch.push({ region: index, tag, sequence: seq++ });
+        }
+        ingestMemories(batch);
+        if (!initialFitDone) { initialFitDone = true; setTimeout(fitView, 600); }
+      };
+      [0, 1, 2].forEach((index, slot) => setTimeout(() => inject(index, 20), 900 + slot * 170));
+      [3, 4, 5, 6].forEach((index, slot) => setTimeout(() => inject(index, regions[index].count), 4200 + slot * 2200));
+      [7, 8, 9].forEach((index, slot) => setTimeout(() => {
+        inject(index, regions[index].count);
+        if (slot === 2 && !userMovedCamera) setTimeout(fitView, 700);
+      }, 13000 + slot * 2200));
+    }
+    window.__graph = Graph;
+    window.ingestMemories = ingestMemories;
+    window.ensureCore = ensureCore;
+    window.addEventListener('resize', () => { Graph.width(window.innerWidth).height(window.innerHeight); updateLabels(); });
+  </script>
+</body>
+</html>

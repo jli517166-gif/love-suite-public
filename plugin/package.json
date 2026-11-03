@@ -1,0 +1,48 @@
+{
+  "name": "dsh-memory-network",
+  "version": "1.16.0",
+  "description": "Testing-stage companion runtime for DSH: local-first memory, core memory, mood, heartbeat, proactive messages, switchable personas and a memory star map. Expect issues; not production-ready.",
+  "type": "module",
+  "main": "index.js",
+  "exports": {
+    ".": "./index.js",
+    "./client": "./client.js",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "*.js",
+    "emoji",
+    "channels",
+    "runtime",
+    "http",
+    "tools",
+    "star",
+    "patches",
+    "cordis.patch.yml",
+    "README.md",
+    "SOUL.md",
+    "docs"
+  ],
+  "peerDependencies": {
+    "@deepseek-ai/schemastery": "^3.18.1"
+  },
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    },
+    "client": {
+      "inject": [],
+      "platform": "web"
+    }
+  },
+  "keywords": [
+    "dsh-plugin",
+    "companion",
+    "memory",
+    "persona",
+    "proactive",
+    "qq",
+    "local-first"
+  ],
+  "license": "MIT"
+}

@@ -1,0 +1,75 @@
+{
+  "name": "dsh-memory-network",
+  "version": "1.16.0",
+  "description": "Testing-stage companion runtime for DeepSeek Harness: local-first memory, core memory, mood, heartbeat, proactive messages, switchable personas and a memory star map. Expect issues; not production-ready.",
+  "type": "module",
+  "license": "MIT",
+  "main": "plugin/index.js",
+  "exports": {
+    ".": "./plugin/index.js",
+    "./client": "./plugin/client.js",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "plugin",
+    "README.md",
+    "MANUAL.md",
+    "LICENSE",
+    "CREDITS.md"
+  ],
+  "keywords": [
+    "dsh-plugin",
+    "deepseek-harness",
+    "companion",
+    "memory",
+    "persona",
+    "proactive",
+    "qq",
+    "local-first"
+  ],
+  "peerDependencies": {
+    "@deepseek-ai/schemastery": "^3.18.1"
+  },
+  "dsh": {
+    "bundle": {
+      "patch": "./plugin/cordis.patch.yml"
+    },
+    "client": {
+      "platform": "web"
+    }
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/jli517166-gif/love-suite-public.git"
+  },
+  "homepage": "https://github.com/jli517166-gif/love-suite-public#readme",
+  "bugs": {
+    "url": "https://github.com/jli517166-gif/love-suite-public/issues"
+  },
+  "devDependencies": {
+    "jsdom": "25.0.1",
+    "react": "18.3.1",
+    "react-dom": "18.3.1",
+    "eslint-scope": "8.4.0",
+    "esbuild": "0.25.12",
+    "prettier": "3.6.2",
+    "@deepseek-ai/schemastery": "3.18.5",
+    "acorn": "8.15.0"
+  },
+  "scripts": {
+    "test": "node plugin/patches/verify-all.mjs",
+    "build:client": "node scripts/build-client.mjs",
+    "check:client": "node scripts/build-client.mjs --check",
+    "check:architecture": "node plugin/patches/verify-architecture.mjs",
+    "format:check": "prettier --check \"plugin/{runtime,http,tools,client-src}/**/*.js\" plugin/index.js plugin/memory-contract.js plugin/maintenance-errors.js plugin/maintenance-proposals.js plugin/reflection-worker.js plugin/reflection-material-reader.js plugin/reflection-segments.js plugin/material-privacy.js plugin/reflection-guidance.js plugin/memory-evidence.js",
+    "format:write": "prettier --write \"plugin/{runtime,http,tools,client-src}/**/*.js\" plugin/index.js plugin/memory-contract.js plugin/maintenance-errors.js plugin/maintenance-proposals.js plugin/reflection-worker.js plugin/reflection-material-reader.js plugin/reflection-segments.js plugin/material-privacy.js plugin/reflection-guidance.js plugin/memory-evidence.js",
+    "test:live": "node plugin/patches/live-maintenance-dialogue.mjs",
+    "test:live-background": "node plugin/patches/live-background-maintenance.mjs",
+    "test:live-material": "node plugin/patches/live-full-material.mjs",
+    "test:deploy": "node plugin/patches/verify-deployment.mjs"
+  },
+  "engines": {
+    "node": ">=24"
+  },
+  "packageManager": "npm@11.13.0"
+}

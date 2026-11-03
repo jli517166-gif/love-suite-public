@@ -1,0 +1,16 @@
+# Match Prettier's LF contract on Windows cold checkouts. Do not normalize frozen star assets.
+plugin/runtime/** text eol=lf
+plugin/http/** text eol=lf
+plugin/tools/** text eol=lf
+plugin/client-src/** text eol=lf
+plugin/index.js text eol=lf
+plugin/client.js text eol=lf
+plugin/memory-contract.js text eol=lf
+plugin/maintenance-errors.js text eol=lf
+plugin/maintenance-proposals.js text eol=lf
+plugin/reflection-worker.js text eol=lf
+plugin/reflection-material-reader.js text eol=lf
+plugin/reflection-segments.js text eol=lf
+plugin/material-privacy.js text eol=lf
+plugin/reflection-guidance.js text eol=lf
+plugin/memory-evidence.js text eol=lf

@@ -1,0 +1,1931 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#101420">
+<link rel="icon" href="data:,">
+<title>记忆星海 · Memory Universe</title>
+<style>
+
+  :root {
+    color-scheme: dark;
+    --bg: #090d18; --surface: #101420; --raised: #171c2b;
+    --ink: #e9edf7; --dim: #9aa6bd; --muted: #737f98;
+    --accent: #b5a2ff; --line: #ffffff0f; --side: 218px; --inspect: 302px;
+    font-family: "Segoe UI Variable", "Segoe UI", "Microsoft YaHei UI", sans-serif;
+    font-size: 13px; line-height: 1.6;
+  }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; margin: 0; }
+  body { background: var(--bg); color: var(--ink); overflow: hidden; }
+  button, input, select { font: inherit; }
+  button { cursor: pointer; color: inherit; touch-action: manipulation; }
+  button, select { -webkit-tap-highlight-color: transparent; }
+  button { border: 0; background: none; }
+  button:disabled { cursor: wait; opacity: .6; }
+  button, a, input, select { outline-offset: 4px; }
+  :focus-visible { outline: 2px solid var(--accent); }
+  button:hover { color: white; }
+  a { color: var(--accent); }
+  .icon { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.65; stroke-linecap: round; stroke-linejoin: round; flex-shrink: 0; }
+  .svg-defs, [hidden] { display: none !important; }
+  .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+  .skip { position: fixed; top: -60px; left: 20px; z-index: 60; padding: 10px 16px; background: var(--raised); }
+  .skip:focus { top: 10px; }
+  .topbar { height: 78px; display: flex; align-items: center; border-bottom: 1px solid var(--line); background: var(--surface); padding: 0 26px 0 24px; gap: 26px; }
+  .brand { display: flex; align-items: center; gap: 12px; width: calc(var(--side) - 24px); flex-shrink: 0; }
+  .brand-mark { width: 32px; height: 36px; color: #c3b5ff; }
+  .brand strong { display: block; font-size: 18px; font-weight: 600; letter-spacing: .09em; line-height: 1.5; }
+  .brand small { display: block; color: #8894ac; font-size: 10px; letter-spacing: .09em; }
+  .breadcrumb { display: flex; align-items: center; gap: 12px; color: var(--dim); font-size: 12px; white-space: nowrap; }
+  .breadcrumb b { color: var(--ink); font-weight: 500; }
+  .breadcrumb .slash { color: #485268; }
+  .search { margin-left: auto; display: flex; align-items: center; gap: 10px; width: min(330px, 28vw); min-width: 170px; padding: 9px 12px; border: 1px solid #ffffff12; border-radius: 8px; background: #0b0f1b; color: var(--muted); }
+  .search:focus-within { border-color: #b5a2ff88; box-shadow: 0 0 0 3px #b5a2ff0c; }
+  .search input { width: 100%; min-width: 0; border: 0; background: transparent; color: var(--ink); outline: 0; font-size: 12px; }
+  .search input::placeholder { color: #7f8aa1; }
+  kbd { font: 10px "Segoe UI", sans-serif; border: 1px solid #ffffff18; border-radius: 4px; padding: 0 5px; color: #8f99b1; white-space: nowrap; }
+  .refresh { display: flex; align-items: center; justify-content: center; gap: 8px; padding: 9px 14px; border-radius: 7px; background: #b5a2ff; color: #211b36; font-size: 12px; font-weight: 600; white-space: nowrap; }
+  .refresh:hover { color: #171027; background: #c9bbff; }
+  .refresh .icon { width: 15px; height: 15px; }
+  .refresh.has-update { color: #b9f4ff; border-color: #70dff05c; background: #70dff00d; }
+  .refresh.has-update::after { content: ''; width: 5px; height: 5px; border-radius: 50%; background: #70dff0; box-shadow: 0 0 10px #70dff0; }
+  .workspace { height: calc(100dvh - 78px); display: grid; grid-template-columns: var(--side) minmax(0, 1fr) var(--inspect); }
+  .sidebar { display: flex; flex-direction: column; background: var(--surface); border-right: 1px solid var(--line); min-height: 0; padding: 25px 15px 16px; }
+  .nav-current { display: flex; align-items: center; gap: 10px; padding: 10px 13px; color: #c7baff; background: #b5a2ff10; border: 1px solid #b5a2ff1a; border-radius: 7px; font-weight: 500; }
+  .nav-current .icon { width: 17px; }
+  .nav-current span:last-child { margin-left: auto; font-size: 10px; background: #b5a2ff12; padding: 0 5px; border-radius: 3px; }
+  .side-heading { display: flex; align-items: center; justify-content: space-between; margin: 31px 12px 11px; }
+  .side-heading h2 { font-size: 11px; font-weight: 500; color: var(--muted); margin: 0; }
+  .text-button { font-size: 10px; color: var(--dim); padding: 3px 0 3px 8px; }
+  .text-button:hover { color: var(--accent); }
+  .layers { overflow: auto; scrollbar-width: thin; scrollbar-color: #333b50 transparent; }
+  .layer { position: relative; display: flex; align-items: center; gap: 10px; padding: 9px 12px; margin-bottom: 3px; min-height: 40px; cursor: pointer; color: #c5ccdc; font-size: 12px; border-radius: 6px; }
+  .layer:hover { background: #ffffff05; }
+  .layer input { position: absolute; opacity: 0; width: 1px; height: 1px; }
+  .layer:has(input:focus-visible) { outline: 2px solid var(--accent); outline-offset: -2px; }
+  .layer-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--layer); flex-shrink: 0; }
+  .layer-count { margin-left: auto; color: var(--muted); font-size: 11px; font-variant-numeric: tabular-nums; }
+  .layer-check { width: 12px; height: 12px; border: 1px solid #6a627e; border-radius: 3px; margin-left: 8px; position: relative; background: #b5a2ff14; }
+  .layer input:checked ~ .layer-check::after { content: ''; position: absolute; width: 5px; height: 3px; border-left: 1px solid var(--accent); border-bottom: 1px solid var(--accent); transform: rotate(-45deg); left: 2px; top: 2px; }
+  .layer.off { color: var(--muted); }
+  .layer.off .layer-dot { opacity: .3; }
+  .layer.off .layer-check { background: transparent; border-color: #374057; }
+  .sidebar-bottom { margin-top: auto; padding-top: 22px; }
+  .source-card { border: 1px solid #ffffff0d; border-radius: 8px; padding: 14px 12px; background: #ffffff02; }
+  .source-card .source-title { display: flex; align-items: center; gap: 7px; font-size: 11px; color: #c6cedf; }
+  .source-card .icon { color: #8f9cb5; width: 15px; }
+  .source-card p { font-size: 10px; color: var(--muted); margin: 7px 0 0; line-height: 1.8; }
+  .local-status { display: flex; align-items: center; gap: 7px; margin: 17px 11px 0; font-size: 10px; color: #9ca7bc; }
+  .status-dot { width: 5px; height: 5px; background: #83cfb0; border-radius: 50%; display: inline-block; }
+  .local-status span:last-child { color: #68758c; margin-left: auto; }
+  .stage { position: relative; min-width: 0; overflow: hidden; background: var(--bg); isolation: isolate; }
+  #sky, #scene { position: absolute; inset: 0; width: 100%; height: 100%; }
+  #sky { z-index: -2; }
+  #galaxy-photo { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: -1; opacity: .2; mix-blend-mode: screen; pointer-events: none; transition: opacity .8s ease; }
+  .stage.demo #galaxy-photo { opacity: .62; }
+  #scene { z-index: -1; }
+  #scene canvas { display: block; touch-action: none; cursor: grab; }
+  #scene canvas:active { cursor: grabbing; }
+  .stage-top { position: relative; z-index: 2; display: flex; align-items: flex-start; justify-content: space-between; padding: 28px 27px 0; pointer-events: none; gap: 14px; }
+  .stage-title h1 { font-size: 21px; font-weight: 500; margin: 0; letter-spacing: .035em; }
+  .stage-title p { font-size: 11px; color: var(--dim); margin: 6px 0 0; }
+  .view-tabs { display: flex; border: 1px solid #ffffff0e; padding: 3px; border-radius: 7px; background: #121725e8; pointer-events: auto; flex-shrink: 0; }
+  .view-tabs button { display: flex; align-items: center; gap: 6px; color: var(--dim); padding: 6px 10px; font-size: 11px; border-radius: 4px; }
+  .view-tabs button[aria-pressed="true"] { background: #2c2942; color: #d1c5ff; }
+  .view-tabs button:hover { background: #ffffff0b; }
+  .view-tabs .icon { width: 14px; height: 14px; }
+  .graph-note { position: absolute; top: 112px; left: 28px; display: flex; align-items: center; gap: 6px; font-size: 10px; color: #808ca6; pointer-events: none; }
+  .graph-note .status-dot { background: #b5a2ff; width: 4px; height: 4px; }
+  .graph-caption { position: absolute; bottom: 128px; width: 100%; text-align: center; pointer-events: none; color: #7b879e; font-size: 11px; }
+  .graph-caption strong { display: block; color: #d7d6e6; font-size: 13px; font-weight: 400; letter-spacing: .14em; margin-bottom: 5px; }
+  .stage-controls { position: absolute; bottom: 68px; left: 50%; transform: translateX(-50%); display: flex; align-items: center; padding: 4px; border: 1px solid #ffffff12; border-radius: 9px; background: #131826e8; box-shadow: 0 8px 28px #0003; }
+  .stage-controls button { display: grid; place-items: center; width: 33px; height: 32px; color: #a6b0c5; border-radius: 5px; }
+  .stage-controls button:hover { background: #ffffff0c; color: #ddd5ff; }
+  .control-divider { width: 1px; height: 15px; background: #ffffff12; margin: 0 4px; }
+  #zoom-value { color: #9da8bf; font-size: 10px; min-width: 44px; text-align: center; font-variant-numeric: tabular-nums; }
+  .stage-footer { position: absolute; left: 26px; right: 26px; bottom: 0; height: 46px; border-top: 1px solid #ffffff09; display: flex; align-items: center; justify-content: space-between; gap: 12px; font-size: 10px; color: #8a96ad; }
+  .tiers { display: flex; gap: 14px; }
+  .tiers span { white-space: nowrap; display: inline-flex; align-items: center; gap: 5px; }
+  .tiers i { display: inline-block; border-radius: 50%; }
+  .tiers b { font-weight: 400; color: #b8c2d7; margin-left: 2px; }
+  .inspector { background: var(--surface); border-left: 1px solid var(--line); display: flex; flex-direction: column; min-height: 0; position: relative; }
+  .inspector-heading { height: 68px; padding: 24px 23px 0; display: flex; justify-content: space-between; align-items: flex-start; flex-shrink: 0; }
+  .inspector-heading h2 { font-size: 12px; font-weight: 500; margin: 0; }
+  .inspector-heading span { color: var(--muted); font-size: 10px; }
+  .overview { padding: 0 20px 18px; display: flex; flex-direction: column; min-height: 0; flex: 1; }
+  .overview-visual { height: 126px; border: 1px solid #ffffff09; border-radius: 9px; display: flex; align-items: center; justify-content: center; position: relative; background: radial-gradient(ellipse at 50% 100%, #7160c415, transparent 75%); flex-shrink: 0; }
+  .orbit { width: 96px; height: 96px; color: var(--accent); opacity: .8; }
+  .overview-visual span { position: absolute; right: 13px; top: 10px; color: #9ca5be; font-size: 9px; display: flex; align-items: center; gap: 4px; }
+  .overview-visual .icon { width: 11px; height: 11px; }
+  .stats { display: grid; grid-template-columns: repeat(3, 1fr); padding: 19px 0 20px; border-bottom: 1px solid var(--line); gap: 10px; }
+  .stats div { display: flex; flex-direction: column; gap: 3px; }
+  .stats b { font-size: 23px; line-height: 1.3; font-weight: 500; font-variant-numeric: tabular-nums; letter-spacing: -.04em; }
+  .stats span { color: var(--muted); font-size: 10px; }
+  .index-heading { display: flex; align-items: center; justify-content: space-between; margin: 21px 0 10px; gap: 10px; }
+  .index-heading h3 { font-size: 11px; font-weight: 500; margin: 0; }
+  .index-heading select { font-size: 10px; padding: 4px; color: #9da8bd; background: #101420; border: 1px solid #ffffff10; border-radius: 4px; max-width: 110px; }
+  .index-list { overflow: auto; scrollbar-width: thin; scrollbar-color: #333b50 transparent; min-height: 0; }
+  .node-row { display: flex; text-align: left; width: 100%; gap: 10px; align-items: flex-start; padding: 11px 1px; border-bottom: 1px solid #ffffff07; content-visibility: auto; contain-intrinsic-size: auto 66px; }
+  .node-row:hover { background: #b5a2ff08; }
+  .node-row .layer-dot { margin-top: 7px; width: 6px; height: 6px; }
+  .node-row .node-copy { min-width: 0; flex: 1; }
+  .node-row strong { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 400; color: #c9d0e1; font-size: 11px; }
+  .node-row small { display: block; color: #7e8ba4; font-size: 10px; margin-top: 3px; }
+  .node-row > .icon { width: 13px; height: 13px; color: #58627a; margin-top: 4px; }
+  .inspector-tip { margin-top: auto; padding-top: 16px; font-size: 10px; color: #7d88a0; line-height: 1.8; }
+  .inspector-tip .icon { width: 12px; height: 12px; vertical-align: -2px; margin-right: 4px; }
+  .panel { display: none; padding: 2px 23px 26px; overflow: auto; overscroll-behavior: contain; scrollbar-width: thin; user-select: text; }
+  .inspector.has-selection .overview { display: none; }
+  .panel.show { display: block; }
+  .close { color: #98a2b8; padding: 4px; margin-top: -4px; border-radius: 5px; }
+  .close:hover { background: #ffffff0a; }
+  .tag { display: inline-flex; gap: 6px; align-items: center; color: #c6b9ff; background: #b5a2ff10; border: 1px solid #b5a2ff16; font-size: 10px; padding: 3px 9px; border-radius: 5px; margin: 5px 0 17px; }
+  .panel h3 { font-size: 20px; line-height: 1.6; font-weight: 500; margin: 0 0 18px; overflow-wrap: anywhere; text-wrap: pretty; }
+  .detail-facts { display: flex; gap: 20px; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); padding: 13px 0; margin-bottom: 22px; }
+  .detail-facts div { display: flex; flex-direction: column; gap: 3px; font-size: 11px; }
+  .detail-facts span { font-size: 10px; color: var(--muted); }
+  .detail-label { font-size: 10px; color: #8895ae; margin: 22px 0 10px; font-weight: 400; }
+  .panel .body { color: #bac5da; white-space: pre-wrap; overflow-wrap: anywhere; font-size: 12px; line-height: 1.95; }
+  .panel .meta { margin-top: 15px; color: #8895ad; font-size: 10px; overflow-wrap: anywhere; }
+  .kw { display: flex; gap: 6px; flex-wrap: wrap; }
+  .kw span { color: #a8b4cc; background: #ffffff04; border: 1px solid #ffffff0c; border-radius: 4px; padding: 3px 7px; font-size: 10px; overflow-wrap: anywhere; max-width: 100%; }
+  .related .node-row { padding: 11px 0; }
+  .detail-back { width: 100%; padding: 9px; border: 1px solid #b5a2ff28; border-radius: 6px; color: #bdadf1; font-size: 11px; margin-top: 23px; }
+  .detail-back:hover { background: #b5a2ff0b; }
+  .memory-list { position: absolute; inset: 150px 27px 56px; z-index: 3; overflow: auto; scrollbar-width: thin; }
+  .memory-list .node-row { padding: 17px 14px; background: #111725dd; margin-bottom: 7px; border: 1px solid #ffffff09; border-radius: 7px; }
+  .memory-list .node-row:hover { background: #1e2438; border-color: #b5a2ff38; }
+  .memory-list .node-row strong { font-size: 13px; }
+  .memory-list .node-row small { font-size: 11px; }
+  .node-excerpt { color: #97a4bf; font-size: 11px; line-height: 1.8; margin-top: 9px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; overflow-wrap: anywhere; }
+  .stage.list-view #scene, .stage.list-view #sky { visibility: hidden; }
+  .stage.list-view .graph-caption, .stage.list-view .stage-controls { display: none; }
+  .empty { text-align: center; padding: 32px 12px; font-size: 12px; color: #a4b0c8; line-height: 1.9; }
+  .empty small { display: block; color: #8491aa; margin-top: 5px; }
+  .stage-empty { position: absolute; top: 44%; left: 20px; right: 20px; pointer-events: none; }
+  .webgl-fallback { position: absolute; inset: 0; z-index: 6; display: grid; place-content: center; gap: 10px; padding: 40px; text-align: center; background: radial-gradient(circle at 50% 40%, #131a2b, #090d18 70%); }
+  .webgl-fallback b { font-size: 16px; font-weight: 500; color: var(--ink); }
+  .webgl-fallback p { margin: 0; font-size: 13px; color: var(--dim); max-width: 420px; line-height: 1.7; }
+  .loading { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 18px; z-index: 15; color: #b9c2d8; font-size: 12px; background: var(--bg); transition: opacity 250ms ease; padding: 30px; text-align: center; }
+  .loading.hide { opacity: 0; pointer-events: none; }
+  .loading-mark { width: 46px; height: 46px; color: var(--accent); }
+  .loading button { border: 1px solid #b5a2ff44; padding: 7px 18px; border-radius: 6px; color: #c6b8ff; }
+  .toast { position: fixed; bottom: 22px; left: 50%; transform: translateX(-50%); padding: 11px 18px; background: #252337; border: 1px solid #b5a2ff35; color: #dfd8f5; border-radius: 8px; z-index: 50; box-shadow: 0 8px 35px #0005; max-width: calc(100vw - 30px); font-size: 12px; }
+  .mobile-menu, .sidebar-dismiss { display: none; }
+  @media (min-width: 1600px) { :root { --side: 236px; --inspect: 332px; } .stage-top { padding: 32px; } .inspector-heading { padding-left: 26px; padding-right: 26px; } .overview { padding-left: 25px; padding-right: 25px; } }
+  @media (max-width: 1180px) { :root { --side: 188px; --inspect: 270px; } .breadcrumb { display: none; } .search { width: min(380px, 43vw); } .topbar { gap: 17px; } .stage-top { padding: 24px 20px 0; flex-wrap: wrap; } .graph-note { top: 138px; left: 20px; } .stage-footer { left: 20px; right: 20px; } .tiers { gap: 8px; } .tiers b { display: none; } .memory-list { top: 170px; } }
+  @media (max-width: 960px) { :root { --side: 188px; --inspect: 260px; } .workspace { grid-template-columns: minmax(0, 1fr) var(--inspect); } .sidebar { position: absolute; z-index: 25; left: 0; top: 78px; bottom: 0; width: 230px; transform: translateX(-100%); transition: transform 180ms ease; box-shadow: 30px 0 80px #0006; } body.sidebar-open .sidebar { transform: translateX(0); } .sidebar-dismiss { display: block; position: absolute; top: 27px; right: 24px; padding: 4px; font-size: 17px; } .nav-current { margin-right: 30px; } .nav-current span:last-child { display: none; } .mobile-menu { display: grid; place-items: center; padding: 6px; color: #abb6cc; } .brand { width: auto; margin-right: auto; } .search { margin-left: 0; } .stage-top { flex-wrap: nowrap; } .graph-note { top: 112px; } .memory-list { top: 150px; } }
+  @media (max-width: 660px) { .topbar { height: 122px; padding: 13px 16px; display: grid; grid-template-columns: 24px minmax(0, 1fr) auto; gap: 11px; align-content: center; } .brand { gap: 8px; } .brand-mark { width: 25px; height: 29px; } .brand strong { font-size: 15px; } .brand small { font-size: 8px; } .refresh { padding: 8px 10px; font-size: 10px; } .search { grid-row: 2; grid-column: 1 / -1; width: 100%; min-width: 0; padding: 7px 10px; } .search kbd { display: none; } .workspace { height: calc(100dvh - 122px); grid-template-columns: minmax(0, 1fr); } .sidebar { top: 122px; } .inspector { display: none; } .inspector.has-selection { display: flex; position: fixed; bottom: 0; left: 0; right: 0; height: min(70dvh, 650px); z-index: 30; border: 1px solid #343249; border-radius: 16px 16px 0 0; box-shadow: 0 -25px 80px #0008; padding-bottom: env(safe-area-inset-bottom); } .inspector-heading { height: 57px; padding-top: 19px; } .panel { padding-top: 0; } .panel h3 { font-size: 18px; } .stage-title h1 { font-size: 19px; } .stage-title p { font-size: 10px; } .stage-top { padding: 22px 17px 0; gap: 10px; } .view-tabs button { padding: 5px 7px; font-size: 10px; } .view-tabs .icon { width: 13px; } .graph-note { left: 17px; top: 103px; } .graph-caption { bottom: 125px; font-size: 10px; } .stage-footer { left: 17px; right: 17px; gap: 7px; font-size: 9px; } .tiers { gap: 8px; } .stage-controls button { width: 36px; height: 35px; } .memory-list { inset: 140px 17px 53px; } }
+
+  /* Compact observatory: the graph is the interface; tools appear on demand. */
+  :root { --top: 64px; --drawer: 318px; --inspect: 360px; }
+  .topbar { height: var(--top); padding: 0 18px 0 20px; gap: 12px; background: rgba(13, 18, 31, .96); }
+  .brand { width: auto; margin-right: 18px; order: 1; }
+  .brand-mark { width: 25px; height: 29px; }
+  .brand strong { font-size: 15px; letter-spacing: .06em; }
+  .brand small, .breadcrumb { display: none; }
+  .search { order: 2; margin: 0 auto; width: min(520px, 48vw); background: #090d17; }
+  .refresh { order: 3; padding: 8px 12px; background: transparent; color: #aeb8cc; border: 1px solid #ffffff12; }
+  .refresh:hover { color: #e8e3ff; background: #ffffff08; }
+  .mobile-menu { order: 4; display: flex; align-items: center; gap: 7px; padding: 8px 12px; border: 1px solid #b5a2ff30; border-radius: 7px; background: #b5a2ff12; color: #c9bcff; font-size: 11px; }
+  .mobile-menu:hover, .mobile-menu[aria-expanded="true"] { background: #b5a2ff20; color: #e2dcff; }
+  .workspace { height: calc(100dvh - var(--top)); display: block; }
+  body::after { content: ''; position: fixed; inset: var(--top) 0 0; z-index: 34; background: #03050b8f; opacity: 0; pointer-events: none; transition: opacity 160ms ease-out; }
+  body.sidebar-open::after { opacity: 1; pointer-events: auto; }
+  .sidebar { position: fixed; z-index: 40; right: 14px; left: auto; top: calc(var(--top) + 10px); bottom: auto; width: min(var(--drawer), calc(100vw - 28px)); max-height: calc(100dvh - var(--top) - 24px); padding: 18px; border: 1px solid #ffffff14; border-radius: 12px; background: rgba(18, 23, 38, .98); box-shadow: 0 24px 80px #0008; transform: translateY(-8px) scale(.98); transform-origin: top right; opacity: 0; visibility: hidden; transition: transform 160ms ease-out, opacity 140ms ease-out, visibility 0s linear 160ms; }
+  body.sidebar-open .sidebar { transform: translateY(0) scale(1); opacity: 1; visibility: visible; transition-delay: 0s; }
+  .sidebar-dismiss { display: grid; place-items: center; position: absolute; top: 14px; right: 14px; width: 28px; height: 28px; padding: 0; border-radius: 6px; color: #919cb2; }
+  .sidebar-dismiss:hover { background: #ffffff08; }
+  .function-title { margin: 0 38px 18px 0; font-size: 13px; font-weight: 500; }
+  .function-section { border-top: 1px solid var(--line); padding-top: 15px; margin-top: 15px; }
+  .function-label { display: block; color: #8995ad; font-size: 10px; margin: 0 0 9px; }
+  .nav-current, .source-card { display: none; }
+  .view-tabs { display: grid; grid-template-columns: 1fr 1fr; width: 100%; background: #0c111e; }
+  .view-tabs button { justify-content: center; min-height: 34px; }
+  .side-heading { margin: 0 0 7px; }
+  .side-heading h2 { font-size: 10px; }
+  .layers { display: grid; grid-template-columns: 1fr 1fr; gap: 3px 6px; max-height: 210px; }
+  .layer { min-height: 34px; padding: 7px 8px; margin: 0; }
+  .layer-check { margin-left: 2px; }
+  .layer-count { margin-left: auto; }
+  .function-row { display: flex; align-items: center; gap: 10px; }
+  .function-row select { flex: 1; min-width: 0; height: 34px; border: 1px solid #ffffff12; border-radius: 6px; padding: 0 9px; color: #c2cada; background: #0c111e; }
+  .semantic-legend { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 10px; color: #a7b1c5; font-size: 10px; }
+  .semantic-legend span { display: flex; align-items: center; gap: 7px; min-width: 0; }
+  .semantic-legend i { width: 7px; height: 7px; border-radius: 50%; flex: 0 0 auto; background: var(--mark); box-shadow: 0 0 8px color-mix(in srgb, var(--mark) 55%, transparent); }
+  .semantic-legend .hub-mark { width: 10px; height: 10px; background: transparent; border: 1px solid #70dff0; box-shadow: 0 0 6px #70dff055; }
+  .semantic-legend b { margin-left: auto; color: #737f98; font-weight: 400; font-variant-numeric: tabular-nums; }
+  .motion-toggle { display: flex; align-items: center; justify-content: space-between; width: 88px; min-height: 34px; padding: 0 10px; border: 1px solid #ffffff12; border-radius: 6px; color: #b8c2d5; background: #0c111e; }
+  .motion-toggle .icon { width: 15px; }
+  .stage-controls { position: static; transform: none; flex: 1; justify-content: center; padding: 2px; background: #0c111e; box-shadow: none; border-color: #ffffff12; }
+  .stage-controls button { width: 34px; height: 30px; }
+  .sidebar-bottom { margin-top: 15px; padding-top: 13px; border-top: 1px solid var(--line); }
+  .local-status { margin: 0; }
+  .stage { width: 100%; height: 100%; }
+  .stage-top { padding: 22px 24px 0; pointer-events: none; }
+  .stage-title h1 { font-size: 13px; font-weight: 500; color: #aeb8cc; letter-spacing: .04em; }
+  .stage-title p, .graph-note, .graph-caption, .tiers { display: none; }
+  .stage-footer { left: 24px; right: auto; bottom: 18px; width: auto; height: auto; border: 0; padding: 6px 9px; border-radius: 6px; background: #101522b8; color: #8793aa; backdrop-filter: blur(8px); }
+  .memory-list { inset: 72px max(24px, calc((100vw - 820px) / 2)) 24px; }
+  .memory-list .node-row { background: #101522d9; }
+  .inspector { display: flex; position: fixed; z-index: 30; top: var(--top); right: 0; bottom: 0; width: min(var(--inspect), 100vw); border-left: 1px solid #ffffff12; background: rgba(15, 20, 33, .98); box-shadow: -24px 0 70px #0007; transform: translateX(102%); visibility: hidden; transition: transform 190ms ease-out, visibility 0s linear 190ms; }
+  .inspector.has-selection { transform: translateX(0); visibility: visible; transition-delay: 0s; }
+  .inspector .overview { display: none; }
+  .inspector-heading { height: 62px; padding: 20px 20px 0; }
+  .panel { padding: 2px 22px 28px; }
+  .detail-back { display: none; }
+  .loading { position: fixed; top: var(--top); }
+  @media (max-width: 660px) {
+    :root { --top: 106px; }
+    .topbar { height: var(--top); padding: 11px 14px; display: grid; grid-template-columns: minmax(0, 1fr) auto auto; grid-template-rows: 34px 38px; gap: 8px; }
+    .brand { grid-column: 1; grid-row: 1; margin: 0; }
+    .brand-mark { width: 22px; height: 25px; }
+    .refresh { grid-column: 2; grid-row: 1; padding: 7px 9px; }
+    .refresh span { display: none; }
+    .mobile-menu { grid-column: 3; grid-row: 1; padding: 7px 9px; }
+    .search { grid-column: 1 / -1; grid-row: 2; width: 100%; }
+    .workspace { height: calc(100dvh - var(--top)); }
+    .sidebar { top: calc(var(--top) + 8px); right: 8px; width: calc(100vw - 16px); max-height: calc(100dvh - var(--top) - 16px); }
+    .stage-top { padding: 17px 16px 0; }
+    .stage-footer { left: 16px; bottom: 12px; }
+    .memory-list { inset: 56px 12px 12px; }
+    .inspector.has-selection { top: auto; height: min(76dvh, 680px); width: 100%; border-radius: 14px 14px 0 0; }
+  }
+.star-hint { position: fixed; left: 26px; top: 76px; z-index: 4; font-size: 11px; color: rgba(180,195,225,.62); letter-spacing: .02em; pointer-events: none; }
+.range-hint { margin: 6px 0 0; font-size: 11px; color: rgba(180,195,225,.55); }
+@media (max-width: 760px) { .star-hint { display: none; } }
+.search-results { position: absolute; top: 62px; left: 50%; transform: translateX(-50%); width: min(520px, calc(100% - 40px)); max-height: 260px; overflow: auto; z-index: 30; background: #0d1220f2; border: 1px solid #ffffff1a; border-radius: 10px; box-shadow: 0 18px 50px #0008; backdrop-filter: blur(10px); }
+.search-results button { display: flex; width: 100%; gap: 10px; align-items: baseline; padding: 10px 14px; border: 0; border-bottom: 1px solid #ffffff0d; background: none; color: #dfe8ff; font: inherit; text-align: left; cursor: pointer; }
+.search-results button:hover { background: #ffffff0a; }
+.search-results small { color: #8e9bb8; font-size: 11px; white-space: nowrap; }
+.search-results p { margin: 0; padding: 12px 14px; color: #8e9bb8; font-size: 12px; }
+.stage-help { position: absolute; left: 26px; bottom: 54px; z-index: 4; font-size: 12px; color: rgba(190,205,235,.55); pointer-events: none; transition: opacity .6s ease; }
+.stage-help.used { opacity: .25; }
+.stage-legend { position: absolute; right: 26px; bottom: 54px; z-index: 4; display: flex; gap: 14px; font-size: 11px; color: rgba(190,205,235,.6); pointer-events: none; }
+.stage-legend span { display: inline-flex; align-items: center; gap: 5px; }
+.stage-legend i { display: inline-block; width: 6px; height: 6px; border-radius: 50%; }
+.stage-legend i.ring { width: 7px; height: 7px; background: transparent; border: 1.5px solid rgba(180,200,240,.7); }
+@media (max-width: 760px) { .stage-help { left: 16px; bottom: 46px; font-size: 11px; } .stage-legend { display: none; } }
+.demo-legend { position: absolute; left: 50%; top: 66px; z-index: 6; transform: translateX(-50%); display: flex; gap: 10px; align-items: center; padding: 7px 12px; border: 1px solid #ffffff14; border-radius: 999px; background: #080c16cc; color: #b9c6e2; font-size: 11px; backdrop-filter: blur(8px); }
+.demo-legend b { color: #ffd9a8; font-weight: 500; }
+.demo-legend small { color: #76839d; margin-left: 4px; }
+@media (max-width: 760px) { .demo-legend { display: none !important; } }
+.brain-labels { position: absolute; inset: 0; z-index: 5; pointer-events: none; }
+.brain-label { position: absolute; transform: translate(-50%, -50%); padding: 3px 9px; border-radius: 5px; border: 1px solid rgba(255,255,255,.12); background: rgba(7,11,20,.55); font-size: 13px; letter-spacing: .1em; white-space: nowrap; text-shadow: 0 0 14px currentColor; backdrop-filter: blur(4px); }
+</style>
+<style>
+  /* 插件版：整体字号放大一档，长文本允许换行，避免挤在一起 */
+  body { font-size: 14.5px; }
+  .brand strong { font-size: 21px; }
+  .brand small { font-size: 11.5px; }
+  .breadcrumb { font-size: 13px; }
+  .search input { font-size: 14px; }
+  .refresh { font-size: 14px; }
+  .side-heading h2 { font-size: 13px; }
+  .text-button { font-size: 12px; }
+  .layer { font-size: 13.5px; }
+  .layer-count { font-size: 12.5px; }
+  .source-card .source-title { font-size: 13px; }
+  .source-card p { font-size: 12px; }
+  .local-status { font-size: 12px; }
+  .stage-title h1 { font-size: 24px; overflow-wrap: anywhere; }
+  .stage-title p { font-size: 13px; }
+  .view-tabs button { font-size: 13.5px; }
+  .graph-note { font-size: 12.5px; }
+  .graph-caption strong { font-size: 14px; }
+  #zoom-value { font-size: 12px; }
+  .inspector-heading h2 { font-size: 14px; }
+  .inspector-heading span { font-size: 12px; }
+  .stats b { font-size: 26px; }
+  .stats span { font-size: 12px; }
+  .index-heading h3 { font-size: 13px; }
+  .index-heading select { font-size: 12px; }
+  .node-row strong { font-size: 13.5px; }
+  .node-row small { font-size: 12px; }
+  .inspector-tip { font-size: 12px; }
+  .tag { font-size: 12px; }
+  .panel h3 { font-size: 22px; }
+  .detail-facts div { font-size: 13px; }
+  .detail-facts span { font-size: 12px; }
+  .detail-label { font-size: 12px; }
+  .panel .body { font-size: 13.5px; }
+  .panel .meta { font-size: 12px; }
+  .kw span { font-size: 12.5px; }
+  /* 新 3D 星图与旧工作区、星空背景共存 */
+  #scene { z-index: 1; background: transparent; }
+  #scene canvas { background: transparent !important; }
+  #sky { z-index: 0; pointer-events: none; }
+  .brain-labels { display: block; }
+  @keyframes core-label-breathe { 0%,100% { box-shadow: 0 0 8px currentColor; } 50% { box-shadow: 0 0 18px currentColor; } }
+  .core-label { position: absolute; transform: translate(-50%, -50%); padding: 4px 10px; border: 1px solid #ffffff24; border-radius: 6px; background: #070b14ed; font: 600 12px/1.2 -apple-system, "Microsoft YaHei", sans-serif; letter-spacing: .08em; white-space: nowrap; text-shadow: 0 0 14px currentColor; animation: core-label-breathe 2.8s ease-in-out infinite; }
+  body.motion-paused .core-label { animation-play-state: paused; }
+  .stage-motion { position: absolute; top: 18px; right: 22px; z-index: 7; width: auto; gap: 9px; padding: 8px 12px; background: #0c111eed; }
+  .stage-motion[aria-pressed="true"] { border-color: #b5a2ff88; color: #d1c5ff; }
+  .motion-toggle { min-width: 106px; }
+  @media (max-width: 660px) { .stage-motion { top: 12px; right: 12px; } }
+  .brain-labels { z-index: 6; }
+  .graph-note, .graph-caption, .stage-controls, .stage-footer, .stage-empty { z-index: 3; }
+  .stage-help, .stage-legend, .demo-legend { z-index: 4; }
+  .stage-top { z-index: 3; }
+  #scene canvas { display: block; touch-action: none; cursor: grab; }
+  #scene canvas:active { cursor: grabbing; }
+  .stage.list-view #scene, .stage.list-view #sky, .stage.list-view .brain-labels { visibility: hidden; }
+  .stage.list-view .graph-caption, .stage.list-view .stage-controls { display: none; }
+</style>
+</head>
+<body>
+
+<a class="skip" href="#main">跳到记忆工作区</a>
+<svg class="svg-defs" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><defs>
+  <symbol id="i-search" viewBox="0 0 24 24"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 5 5"/></symbol>
+  <symbol id="i-refresh" viewBox="0 0 24 24"><path d="M20 8a8 8 0 1 0 0 8M20 3v5h-5"/></symbol>
+  <symbol id="i-graph" viewBox="0 0 24 24"><path d="m6 7 11-2 2 12-12 3L6 7l13 10M7 20 17 5"/><circle cx="6" cy="7" r="2"/><circle cx="17" cy="5" r="2"/><circle cx="19" cy="17" r="2"/><circle cx="7" cy="20" r="2"/></symbol>
+  <symbol id="i-list" viewBox="0 0 24 24"><path d="M9 6h12M9 12h12M9 18h12M3 6h1M3 12h1M3 18h1"/></symbol>
+  <symbol id="i-lock" viewBox="0 0 24 24"><rect x="5" y="10" width="14" height="11" rx="3"/><path d="M8 10V7a4 4 0 0 1 8 0v3M12 14v3"/></symbol>
+  <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+  <symbol id="i-minus" viewBox="0 0 24 24"><path d="M5 12h14"/></symbol>
+  <symbol id="i-focus" viewBox="0 0 24 24"><path d="M8 3H3v5M16 3h5v5M3 16v5h5M21 16v5h-5"/><circle cx="12" cy="12" r="3"/></symbol>
+  <symbol id="i-pause" viewBox="0 0 24 24"><path d="M9 5v14M15 5v14"/></symbol>
+  <symbol id="i-play" viewBox="0 0 24 24"><path d="m8 4 12 8-12 8Z"/></symbol>
+  <symbol id="i-close" viewBox="0 0 24 24"><path d="m6 6 12 12M18 6 6 18"/></symbol>
+  <symbol id="i-chevron" viewBox="0 0 24 24"><path d="m9 6 6 6-6 6"/></symbol>
+  <symbol id="i-info" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 11v6M12 7h.01"/></symbol>
+  <symbol id="i-menu" viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16"/></symbol>
+  <symbol id="i-sliders" viewBox="0 0 24 24"><path d="M4 7h10M18 7h2M4 17h2M10 17h10"/><circle cx="16" cy="7" r="2"/><circle cx="8" cy="17" r="2"/></symbol>
+  <symbol id="i-orbit" viewBox="0 0 100 100"><ellipse cx="50" cy="50" rx="42" ry="16" transform="rotate(-30 50 50)" fill="none" stroke="currentColor" stroke-opacity=".45"/><ellipse cx="50" cy="50" rx="42" ry="16" transform="rotate(40 50 50)" fill="none" stroke="currentColor" stroke-opacity=".25"/><circle cx="50" cy="50" r="26" fill="none" stroke="currentColor" stroke-opacity=".13"/><circle cx="50" cy="50" r="7" fill="currentColor" fill-opacity=".12"/><circle cx="50" cy="50" r="3" fill="currentColor"/><circle cx="82" cy="30" r="3" fill="#c7baff"/><circle cx="24" cy="27" r="2" fill="#89bad1"/><path d="M50 35v-4M50 65v4M35 50h-4M65 50h4" stroke="currentColor" stroke-opacity=".6"/></symbol>
+</defs></svg>
+<header class="topbar">
+  <button class="mobile-menu" id="menu" aria-label="打开功能面板" aria-expanded="false" aria-controls="sidebar"><svg class="icon" aria-hidden="true"><use href="#i-sliders"/></svg><span>功能</span></button>
+  <div class="brand"><svg class="brand-mark" viewBox="0 0 36 42" fill="none" aria-hidden="true"><path d="m6 10 23-5-7 29L6 10l25 14L22 34" stroke="currentColor" stroke-opacity=".65"/><circle cx="6" cy="10" r="3" fill="currentColor"/><circle cx="29" cy="5" r="2.5" fill="currentColor"/><circle cx="22" cy="34" r="3.5" fill="currentColor"/><circle cx="31" cy="24" r="2" fill="currentColor"/></svg><div><strong>记忆星海</strong><small translate="no">Memory Universe</small></div></div>
+  <div class="breadcrumb"><svg class="icon" aria-hidden="true"><use href="#i-graph"/></svg><span translate="no">love</span><span class="slash">/</span><b>记忆工作区</b></div>
+  <div class="search" role="search"><svg class="icon" aria-hidden="true"><use href="#i-search"/></svg><input id="q" name="memory-search" type="search" aria-label="搜索记忆、实体或关键词" placeholder="搜索记忆、实体或关键词…" autocomplete="off" spellcheck="false"><kbd>Ctrl K</kbd></div>
+  <a class="refresh" href="alt.html" target="_blank" rel="noopener" style="text-decoration:none">备用视图</a><button class="refresh" id="refresh"><svg class="icon" aria-hidden="true"><use href="#i-refresh"/></svg><span>刷新记忆</span></button>
+  <div class="search-results" id="search-results" hidden></div>
+</header>
+<div class="workspace">
+  <aside class="sidebar" id="sidebar" aria-label="功能面板">
+    <button class="sidebar-dismiss" id="dismiss-menu" aria-label="关闭功能面板">×</button>
+    <h2 class="function-title">功能</h2>
+    <div class="view-tabs" role="group" aria-label="展示方式"><button id="view-graph" aria-pressed="true"><svg class="icon" aria-hidden="true"><use href="#i-graph"/></svg>星图</button><button id="view-list" aria-pressed="false"><svg class="icon" aria-hidden="true"><use href="#i-list"/></svg>列表</button></div>
+    
+    <div class="function-section"><span class="function-label">记忆范围</span><p class="range-hint">私聊一个脑，群聊一个脑</p><div class="view-tabs" role="group" aria-label="选择大脑"><button id="brain-private" aria-pressed="true">私聊</button><button id="brain-group" aria-pressed="false">群聊</button></div><select id="brain-group-select" aria-label="选择群" hidden></select></div>
+    <div class="function-section"><div class="side-heading"><h2>记忆图层</h2><button class="text-button" id="toggle-layers">取消全选</button></div><div class="layers" id="layers"></div></div>
+    <div class="function-section"><span class="function-label">节点含义</span><div class="semantic-legend" id="tier-guide" aria-label="节点视觉含义"></div></div>
+    
+    <div class="function-section"><span class="function-label">列表排序</span><div class="function-row"><select id="sort" aria-label="记忆排序"><option value="connections">按关联数量</option><option value="importance">按重要程度</option><option value="name">按名称排序</option></select></div></div>
+    <div class="function-section"><span class="function-label">星图视角</span><div class="function-row"><div class="stage-controls" role="group" aria-label="星图控制"><button id="zoom-out" aria-label="缩小星图" title="缩小"><svg class="icon" aria-hidden="true"><use href="#i-minus"/></svg></button><output id="zoom-value" aria-label="星图缩放">100%</output><button id="zoom-in" aria-label="放大星图" title="放大"><svg class="icon" aria-hidden="true"><use href="#i-plus"/></svg></button><span class="control-divider"></span><button id="reset-view" aria-label="复位视角" title="复位视角"><svg class="icon" aria-hidden="true"><use href="#i-focus"/></svg></button></div><button class="motion-toggle" id="motion" aria-label="暂停动态效果" aria-pressed="true" title="暂停动态效果"><span>动态</span><svg class="icon" aria-hidden="true"><use href="#i-pause"/></svg></button></div></div>
+    <div class="sidebar-bottom"><div class="local-status"><i class="status-dot" aria-hidden="true"></i>本地只读<span id="drawer-count">正在读取…</span></div></div>
+  </aside>
+  <main class="stage" id="main" tabindex="-1" aria-label="记忆探索工作区">
+    <canvas id="sky" aria-hidden="true"></canvas><img id="galaxy-photo" src="assets/m83.jpg" alt="" hidden><div id="scene" aria-label="三维记忆星图"></div>
+    <button class="motion-toggle stage-motion" id="motion-main" aria-label="暂停动画" aria-pressed="false" title="暂停动画"><svg class="icon" aria-hidden="true"><use href="#i-pause"/></svg><span>暂停动画</span></button>
+    <div class="brain-labels" id="brain-labels" hidden></div>
+    <div class="demo-legend" id="demo-legend" hidden><b>测试银河</b><span>核心=自我</span><span>蓝臂=档案</span><span>浅蓝臂=项目</span><span>紫臂=日记</span><span>粉臂=记忆网</span><small>纯演示，不读真实记忆</small></div>
+    <div class="stage-help" id="stage-help">拖拽旋转 · 滚轮缩放 · 点击星查看记忆</div>
+    <div class="stage-legend" aria-hidden="true"><span><i style="background:#b5a2ff"></i>颜色 = 图层</span><span><i style="background:#fff;width:4px;height:4px"></i>大小 = 重要度</span><span><i class="ring"></i>圆环 = 枢纽</span></div>
+    <div class="graph-note" id="graph-note"><i class="status-dot" aria-hidden="true"></i><span>全景视角 · 全部图层</span></div>
+    <div class="memory-list" id="memory-list" hidden aria-label="记忆列表"></div>
+    <div class="stage-empty empty" id="stage-empty" hidden></div>
+    <footer class="stage-footer"><span id="visible-count" role="status" aria-live="polite">正在读取记忆…</span><div class="tiers" id="tiers" aria-label="节点层级"></div></footer>
+    <div class="loading" id="loading" role="status"><svg class="loading-mark" aria-hidden="true"><use href="#i-orbit"/></svg><span>正在连接记忆星海…</span></div>
+  </main>
+  <aside class="inspector" id="inspector" aria-label="记忆索引与详情"><div class="inspector-heading"><h2 id="inspector-title">星海概览</h2><span id="index-caption">记忆与关联</span><button class="close" id="close" aria-label="返回记忆索引" hidden><svg class="icon" aria-hidden="true"><use href="#i-close"/></svg></button></div>
+    <div class="overview"><div class="stats" id="stats"></div><h3 id="index-title" hidden>探索记忆</h3><div class="index-list" id="index-list"></div></div>
+    <section class="panel" id="panel" aria-label="记忆详情"><span class="tag" id="tag"></span><h3 id="title" tabindex="-1"></h3><div class="detail-facts" id="detail-facts"></div><h4 class="detail-label">记忆内容</h4><div class="body" id="body"></div><div class="meta" id="meta"></div><div id="keyword-section"><h4 class="detail-label">关键词</h4><div class="kw" id="kw"></div></div><h4 class="detail-label" id="related-title">关联记忆</h4><div class="related" id="related"></div><button class="detail-back" id="back-to-index">返回记忆索引</button></section>
+  </aside>
+</div>
+<div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
+
+<script src="vendor/three.min.js"></script>
+<script src="vendor/3d-force-graph.min.js"></script>
+<script type="module">
+function webglSupported() {
+  try {
+    const canvas = document.createElement('canvas');
+    const context = canvas.getContext('webgl2') || canvas.getContext('webgl');
+    if (!context) return false;
+    context.getExtension('WEBGL_lose_context')?.loseContext();
+    return true;
+  } catch { return false; }
+}
+
+function showWebGLFallback(error) {
+  const loading = document.getElementById('loading');
+  loading.classList.remove('hide');
+  loading.replaceChildren();
+  const message = document.createElement('span');
+  message.textContent = '无法启动三维星图。请开启浏览器硬件加速，或更新浏览器后重试。';
+  const detail = document.createElement('small');
+  detail.textContent = String(error?.message || 'WebGL 不可用');
+  const retry = document.createElement('button');
+  retry.className = 'refresh'; retry.textContent = '重新加载星图';
+  retry.addEventListener('click', () => location.reload());
+  loading.append(message, detail, retry);
+  loading.style.flexDirection = 'column';
+  loading.style.gap = '14px';
+}
+
+function startStarMap() {
+  if (!webglSupported()) throw new Error('当前浏览器不支持 WebGL');
+
+// Hover transitions follow org-roam-ui's 360ms eased neighbourhood highlight.
+// This module uses the existing graph objects so layout and particles keep running.
+function createGraphEffects(getData) {
+  let hoveredId = null;
+  let relatedIds = new Set();
+  let hoveredLinks = new Set();
+  let previousTime = 0;
+  const nodeLevels = new WeakMap();
+  const endpointId = (endpoint) => typeof endpoint === 'object' ? endpoint?.id : endpoint;
+
+  function setHover(node) {
+    hoveredId = node?.id ?? null;
+    relatedIds = new Set(hoveredId === null ? [] : [hoveredId]);
+    hoveredLinks = new Set();
+    if (hoveredId === null) return;
+    for (const link of getData().links) {
+      if (link.visible === false) continue;
+      const source = endpointId(link.source), target = endpointId(link.target);
+      if (source !== hoveredId && target !== hoveredId) continue;
+      relatedIds.add(source); relatedIds.add(target); hoveredLinks.add(link);
+    }
+  }
+
+  function update(time, enabled = true) {
+    const dt = Math.min(50, previousTime ? time - previousTime : 16);
+    previousTime = time;
+    if (!enabled) return;
+    const blend = 1 - Math.exp(-dt / 90);
+    const data = getData();
+    for (const node of data.nodes) {
+      const object = node.__threeObj;
+      if (!object) continue;
+      const target = relatedIds.has(node.id) ? 1 : 0;
+      const previous = nodeLevels.get(object) || 0;
+      const level = previous + (target - previous) * blend;
+      object.scale.setScalar((node.__breathScale || 1) * (1 + level * (node.id === hoveredId ? 0.18 : 0.08)));
+      nodeLevels.set(object, level);
+    }
+    for (const link of data.links) {
+      const target = hoveredId === null ? 0 : hoveredLinks.has(link) ? 0.45 : -0.55;
+      const previous = link.__hoverLevel || 0;
+      link.__hoverLevel = previous + (target - previous) * blend;
+    }
+  }
+
+  return { setHover, update };
+}
+
+const stage = document.getElementById('main');
+// The user explicitly expects a living star map; the toolbar remains the manual pause control.
+let motionEnabled = true;
+let currentView = 'graph', sortMode = 'connections', simulationFrames = 0;
+let toastTimer, graphLoaded = false, indexPageSize = 60;
+let sourceVersion = null, refreshRunning = false, updateTimer = null, graphRequestId = 0;
+const urlState = new URLSearchParams(location.search);
+const requestedNode = urlState.get('node');
+const numberFormat = new Intl.NumberFormat('zh-CN');
+const fmt = value => numberFormat.format(value);
+
+/* ============================== 星海背景 ============================== */
+const sky = document.getElementById('sky');
+const sctx = sky.getContext('2d');
+let W = 0, H = 0, DPR = 1;
+let stars = [], bandStars = [], clouds = null, skyGrad = null, galaxyLayer = null;
+const t0 = performance.now();
+
+function buildSky() {
+  DPR = Math.min(2, window.devicePixelRatio || 1);
+  W = stage.clientWidth;
+  H = stage.clientHeight;
+  sky.width = Math.floor(W * DPR);
+  sky.height = Math.floor(H * DPR);
+  sky.style.width = W + 'px';
+  sky.style.height = H + 'px';
+  sctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+
+  skyGrad = sctx.createLinearGradient(0, 0, 0, H);
+  skyGrad.addColorStop(0.00, '#02040a');
+  skyGrad.addColorStop(0.30, '#04060e');
+  skyGrad.addColorStop(0.60, '#070a14');
+  skyGrad.addColorStop(0.82, '#080b16');
+  skyGrad.addColorStop(1.00, '#04060c');
+
+  const palette = ['255,255,255', '210,228,255', '175,205,255', '255,238,205', '255,205,220'];
+  stars = [];
+  const n = Math.round(Math.min(1800, W * H / 520));
+  for (let i = 0; i < n; i++) {
+    stars.push({
+      x: Math.random() * W,
+      y: Math.random() * H * 0.96,
+      r: 0.18 + Math.pow(Math.random(), 3.2) * 1.25,
+      c: palette[(Math.random() * palette.length) | 0],
+      a: 0.12 + Math.random() * 0.62,
+      ph: Math.random() * Math.PI * 2,
+      sp: 0.4 + Math.random() * 1.4
+    });
+  }
+
+  bandStars = [];
+  for (let i = 0; i < 620; i++) {
+    const t = Math.random();
+    const bx = W * (0.06 + t * 0.9);
+    const by = H * (0.66 - t * 0.5) + (Math.random() - 0.5) * H * 0.22;
+    bandStars.push({ x: bx, y: by, r: 0.16 + Math.random() * 0.7, a: 0.05 + Math.random() * 0.28 });
+  }
+
+  buildClouds();
+  galaxyLayer = null;
+}
+
+function buildGalaxyLayer() {
+  const c = document.createElement('canvas');
+  c.width = Math.floor(W * 0.9);
+  c.height = Math.floor(H * 0.9);
+  const g = c.getContext('2d');
+  const cx = c.width * 0.5, cy = c.height * 0.46;
+  const scale = Math.min(c.width, c.height) * 0.42;
+  g.globalCompositeOperation = 'screen';
+  for (let index = 0; index < 4200; index += 1) {
+    const arm = index % 2;
+    const spread = Math.pow(Math.random(), 0.72);
+    const radius = 16 + spread * scale;
+    const theta = arm * Math.PI + Math.log(Math.max(1, radius) / 18) * 2.35 + (Math.random() - 0.5) * 0.16;
+    const x = cx + Math.cos(theta) * radius;
+    const y = cy + Math.sin(theta) * radius * 0.44;
+    const warm = radius < scale * 0.2;
+    const hii = !warm && index % 41 === 0;
+    g.fillStyle = warm
+      ? 'rgba(255,225,185,' + (0.10 + Math.random() * 0.25) + ')'
+      : hii
+        ? 'rgba(255,150,190,' + (0.18 + Math.random() * 0.25) + ')'
+        : 'rgba(150,190,255,' + (0.05 + Math.random() * 0.16) + ')';
+    g.beginPath();
+    g.arc(x, y, hii ? 1.2 + Math.random() * 1.4 : 0.35 + Math.random() * 1.1, 0, Math.PI * 2);
+    g.fill();
+  }
+  const halo = g.createRadialGradient(cx, cy, 0, cx, cy, scale * 0.55);
+  halo.addColorStop(0, 'rgba(255,235,200,0.18)');
+  halo.addColorStop(0.35, 'rgba(220,190,255,0.08)');
+  halo.addColorStop(1, 'rgba(100,120,220,0)');
+  g.fillStyle = halo;
+  g.fillRect(0, 0, c.width, c.height);
+  return c;
+}
+
+function buildClouds() {
+  const c = document.createElement('canvas');
+  c.width = Math.floor(W * 0.7);
+  c.height = Math.floor(H * 0.7);
+  const g = c.getContext('2d');
+  g.scale(0.7, 0.7);
+  for (let i = 0; i < 12; i++) {
+    const cx = Math.random() * W;
+    const cy = H * (0.18 + Math.random() * 0.62);
+    const warm = i % 3 === 0;
+    const rx = 120 + Math.random() * 420;
+    const ry = rx * (0.18 + Math.random() * 0.32);
+    const rg = g.createRadialGradient(cx, cy, 0, cx, cy, rx);
+    if (warm) {
+      rg.addColorStop(0, 'rgba(205,120,150,0.07)');
+      rg.addColorStop(0.45, 'rgba(160,90,140,0.035)');
+      rg.addColorStop(1, 'rgba(90,40,90,0)');
+    } else {
+      rg.addColorStop(0, 'rgba(110,150,235,0.075)');
+      rg.addColorStop(0.45, 'rgba(80,120,210,0.035)');
+      rg.addColorStop(1, 'rgba(30,60,130,0)');
+    }
+    g.save();
+    g.translate(cx, cy);
+    g.scale(1, ry / rx);
+    g.beginPath();
+    g.arc(0, 0, rx, 0, Math.PI * 2);
+    g.fillStyle = rg;
+    g.fill();
+    g.restore();
+  }
+  clouds = c;
+}
+
+function drawSky(t) {
+  if (!skyGrad) return;
+  sctx.fillStyle = skyGrad;
+  sctx.fillRect(0, 0, W, H);
+
+  // milky way band
+  const band = sctx.createLinearGradient(0, H, W, H * 0.1);
+  band.addColorStop(0, 'rgba(70,120,190,0)');
+  band.addColorStop(0.45, 'rgba(90,150,220,0.055)');
+  band.addColorStop(0.55, 'rgba(120,175,240,0.07)');
+  band.addColorStop(1, 'rgba(70,120,190,0)');
+  sctx.fillStyle = band;
+  sctx.fillRect(0, 0, W, H);
+
+  if (galaxyPhoto && galaxyPhoto.complete && galaxyPhoto.naturalWidth && new URLSearchParams(location.search).get('demo') === 'galaxy') {
+    sctx.save();
+    sctx.globalCompositeOperation = 'screen';
+    sctx.globalAlpha = 0.62;
+    const size = Math.min(W * 0.82, H * 1.15);
+    sctx.drawImage(galaxyPhoto, (W - size) / 2, (H - size) / 2, size, size);
+    sctx.restore();
+  }
+
+  if (galaxyLayer) {
+    sctx.save();
+    sctx.globalCompositeOperation = 'screen';
+    sctx.globalAlpha = 0.9;
+    sctx.drawImage(galaxyLayer, W * 0.05, H * 0.05, W * 0.9, H * 0.9);
+    sctx.restore();
+  }
+
+  if (clouds) {
+    sctx.save();
+    sctx.globalCompositeOperation = 'screen';
+    sctx.globalAlpha = 0.55;
+    sctx.drawImage(clouds, 0, 0, W, H);
+    sctx.restore();
+  }
+
+  // 银河核心的暖光
+  const core = sctx.createRadialGradient(W * 0.52, H * 0.44, 0, W * 0.52, H * 0.44, W * 0.55);
+  core.addColorStop(0, 'rgba(255,215,180,0.045)');
+  core.addColorStop(0.35, 'rgba(190,150,220,0.06)');
+  core.addColorStop(1, 'rgba(80,90,180,0)');
+  sctx.fillStyle = core;
+  sctx.fillRect(0, 0, W, H);
+
+  for (const s of bandStars) {
+    sctx.globalAlpha = s.a;
+    sctx.fillStyle = '#bcd8ff';
+    sctx.beginPath();
+    sctx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
+    sctx.fill();
+  }
+
+  for (const s of stars) {
+    sctx.globalAlpha = Math.max(0.05, s.a * (0.7 + 0.3 * Math.sin(t * s.sp + s.ph)));
+    sctx.fillStyle = 'rgb(' + s.c + ')';
+    sctx.beginPath();
+    sctx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
+    sctx.fill();
+  }
+  sctx.globalAlpha = 1;
+
+  sctx.globalAlpha = 1;
+}
+
+
+    let galaxyPhoto = new Image();
+    galaxyPhoto.src = 'assets/m83.jpg';
+    let dustObj = null;
+    let skyFrame = 0;
+    function animateSky() {
+      skyFrame += 1;
+      if (!document.hidden && currentView === 'graph' && motionEnabled && skyFrame % 2 === 0) {
+        drawSky(motionSeconds);
+      }
+      requestAnimationFrame(animateSky);
+    }
+
+    const COLORS = {
+      user: '#ffd86b', project: '#7ef0c8', lesson: '#66e0ff', rules: '#ff9f6b',
+      fact: '#b5a2ff', topic: '#ff9fc4', soul: '#ffd9a8',
+      journal: '#a78bfa', life: '#8fe3c0', entity: '#ff7fa8', episode: '#ffb86b',
+      group: '#ffb86b', member: '#66e0ff', groupNote: '#ff9fc4',
+    };
+    const params = new URLSearchParams(location.search);
+    const demo = params.get('demo') || '';
+    let liveMode = false;
+    const note = document.getElementById('visible-count');
+    const labelBox = document.getElementById('brain-labels');
+    labelBox.hidden = false;
+    const loading = document.getElementById('loading');
+    const panel = document.getElementById('panel');
+    const activeLayers = new Set();
+    let allLayers = [];
+    let actualNodes = [];
+    let actualLinks = [];
+    let selectedNode = null;
+    let query = urlState.get('q') || '';
+    let selectedGroup = urlState.get('groupId') || '';
+    let currentBrain = selectedGroup ? 'group' : 'private';
+let loadedBrain = currentBrain, loadedGroup = selectedGroup;
+    let homeDistance = 1400;
+    let userMovedCamera = false;
+
+    const regions = [
+      { name: '自我', color: '#ffd9a8', tags: ['自己', '身份', '边界'], initial: true, count: 18 },
+      { name: '情绪', color: '#ff7fa8', tags: ['开心', '难过', '焦虑'], initial: false, count: 22 },
+      { name: '关系', color: '#66e0ff', tags: ['对方', '聊天', '信任'], initial: false, count: 20 },
+      { name: '工作', color: '#4f8cff', tags: ['项目', '任务', '会议'], initial: false, count: 24 },
+      { name: '日常', color: '#7ef0c8', tags: ['吃饭', '睡觉', '出门'], initial: false, count: 22 },
+      { name: '记忆', color: '#a78bfa', tags: ['以前', '记得', '那次'], initial: false, count: 24 },
+      { name: '群聊', color: '#ffb86b', tags: ['群友', '群里', '大家'], initial: false, count: 20 },
+      { name: '学习', color: '#b6e36b', tags: ['阅读', '练习', '发现'], initial: false, count: 28 },
+      { name: '兴趣', color: '#f48fff', tags: ['音乐', '游戏', '创作'], initial: false, count: 26 },
+      { name: '家庭', color: '#ff916e', tags: ['家人', '陪伴', '小时候'], initial: false, count: 28 },
+    ];
+    const demoCoreAssociations = new Map([
+      [1, [2, 5]], [2, [6]], [3, [4, 7]], [4, [9]], [7, [8]],
+    ]);
+    const demoCorePairKeys = new Set();
+
+    const layerDetails = {
+      user: ['关系', '#66e0ff'], project: ['项目', '#7ef0c8'], lesson: ['学习', '#b6e36b'],
+      rules: ['规则', '#ff9f6b'], fact: ['事实', '#b5a2ff'], topic: ['主题', '#ff9fc4'],
+      soul: ['自我叙事', '#ffd9a8'], journal: ['日记', '#a78bfa'], life: ['日常', '#8fe3c0'],
+      entity: ['人物与实体', '#ff7fa8'], episode: ['事件', '#ffb86b'], group: ['群聊', '#ffb86b'],
+      member: ['群成员', '#66e0ff'], groupNote: ['群记忆', '#ff9fc4'],
+    };
+
+    const graphData = { nodes: [], links: [] };
+    const labels = [];
+    const regionData = new Map();
+    const coreByRegion = new Map();
+    const usedCorePoints = [];
+    const initialCameraOrientation = { yaw: Math.random() * Math.PI * 2, vertical: 0.24 + Math.random() * 0.42 };
+    let Graph;
+    let memorySequence = 0;
+
+    function randomPoint(index) {
+      if (index === 0) return { x: 0, y: 0, z: 0 };
+      // Sample a changing 3D volume with varied radius; never lock branches to a ring or shell.
+      const minRadius = liveMode ? 620 : 480;
+      const maxRadius = liveMode ? 1120 : 900;
+      const minGap = liveMode ? 520 : 400;
+      for (let attempt = 0; attempt < 360; attempt += 1) {
+        const direction = randomDirection3D();
+        const radius = Math.cbrt(minRadius ** 3 + Math.random() * (maxRadius ** 3 - minRadius ** 3));
+        const point = { x: direction.x * radius, y: direction.y * radius, z: direction.z * radius };
+        if (usedCorePoints.every((other) => Math.hypot(point.x - other.x, point.y - other.y, point.z - other.z) > minGap)) return point;
+      }
+      const direction = randomDirection3D();
+      const radius = maxRadius + Math.random() * 100 + index * 3;
+      return { x: direction.x * radius, y: direction.y * radius, z: direction.z * radius };
+    }
+
+    function addLabel(core) {
+      const el = document.createElement('div');
+      el.className = 'core-label';
+      el.style.color = core.color; el.textContent = core.label;
+      labelBox.append(el); labels.push({ el, core });
+    }
+
+    function newCore(index) {
+      if (coreByRegion.has(index)) return coreByRegion.get(index);
+      const region = regions[index];
+      const point = randomPoint(index); usedCorePoints.push(point);
+      const core = { id: 'core:' + index, label: region.name, color: region.color, size: index === 0 ? 48 : 34, core: true, region: index,
+        visible: true, x: point.x, y: point.y, z: point.z, fx: point.x, fy: point.y, fz: point.z };
+      core.__homePosition = { x: point.x, y: point.y, z: point.z };
+      const selfCore = coreByRegion.get(0);
+      if (index !== 0 && selfCore) {
+        graphData.links.push({ source: selfCore.id, target: core.id, color: region.color, kind: 'coreBridge', region: index });
+      }
+      graphData.nodes.push(core); coreByRegion.set(index, core);
+      regionData.set(index, { core, nodes: [], links: [], tagCounts: new Map() });
+      addLabel(core);
+      return core;
+    }
+
+    function connectDemoCores(index) {
+      const related = new Set(demoCoreAssociations.get(index) || []);
+      for (const [sourceIndex, targetIndexes] of demoCoreAssociations) {
+        if (targetIndexes.includes(index)) related.add(sourceIndex);
+      }
+      for (const otherIndex of related) {
+        const left = coreByRegion.get(Math.min(index, otherIndex));
+        const right = coreByRegion.get(Math.max(index, otherIndex));
+        if (!left || !right) continue;
+        const key = `${left.region}:${right.region}`;
+        if (demoCorePairKeys.has(key)) continue;
+        demoCorePairKeys.add(key);
+        graphData.links.push({ source: left.id, target: right.id, color: '#e8ddff', kind: 'coreAssociation', relationCount: 1, label: '主题关联', visible: true });
+      }
+    }
+
+    function updateHud() {
+      const count = actualNodes.filter((node) => node._visible).length;
+      note.textContent = liveMode
+        ? Math.max(0, coreByRegion.size - 1) + ' 个记忆分支 · ' + count + ' 颗记忆星星 · 真实数据'
+        : coreByRegion.size + ' 个核心 · ' + count + ' 条记忆 · 记忆持续注入';
+      document.getElementById('drawer-count').textContent = count + ' 条记忆';
+      document.getElementById('graph-note').querySelector('span').textContent = selectedNode
+        ? '正在查看：' + selectedNode.label
+        : currentBrain === 'group' ? '群聊记忆 · ' + count + ' 条可见' : '私聊记忆 · ' + count + ' 条可见';
+      document.getElementById('visible-count').textContent = count
+        ? count + ' 颗记忆星星 · ' + graphData.links.filter((link) => link.visible !== false).length + ' 条关联'
+        : '没有匹配的记忆星星';
+    }
+
+    function buildLiveGraph(data, { resetFilters = false, groupId = selectedGroup } = {}) {
+      const wasLoaded = graphLoaded;
+      liveMode = true;
+      if (resetFilters) {
+        activeLayers.clear();
+        query = '';
+        document.getElementById('q').value = '';
+        document.getElementById('search-results').hidden = true;
+      }
+      graphData.nodes.length = 0;
+      graphData.links.length = 0;
+      glowObjects.length = 0;
+      branchPulls.clear();
+      labels.length = 0;
+      labelBox.replaceChildren();
+      regionData.clear();
+      coreByRegion.clear();
+      usedCorePoints.length = 0;
+      actualNodes = [];
+      actualLinks = [];
+      selectedNode = null;
+      setPanelState(false);
+
+      const sourceNodes = Array.isArray(data.nodes) ? data.nodes : [];
+      const sourceLinks = Array.isArray(data.links) ? data.links : [];
+      const authoredCores = new Map((data.cores || []).map((core) => [core.id, core]));
+      const belongsToSelf = (node) => node.coreId ? node.coreId === 'self' : node.layer === 'soul';
+      const selfSource = sourceNodes.find((node) => node.id === 'self:me') || sourceNodes.find(belongsToSelf);
+      const buckets = new Map();
+      for (const node of sourceNodes) {
+        // Soul records belong to the self core as its own memory stars.
+        if (belongsToSelf(node)) continue;
+        const layer = String(node.layer || 'fact');
+        const descriptor = authoredCores.get(node.coreId);
+        const [defaultName, color] = layerDetails[layer] || [layer, '#9bb3ff'];
+        const name = descriptor?.title || defaultName;
+        const key = descriptor ? 'authored:' + descriptor.id : layer;
+        if (!buckets.has(key)) buckets.set(key, { name, color, layer, descriptor, nodes: [] });
+        buckets.get(key).nodes.push(node);
+      }
+
+      regions.splice(0, regions.length, { name: '自我', color: '#ffd9a8', tags: [], initial: true, count: 0 });
+      const orderedBuckets = [...buckets.entries()].sort((a, b) => a[1].name.localeCompare(b[1].name, 'zh-CN'));
+      for (const [, bucket] of orderedBuckets) regions.push({ name: bucket.name, color: bucket.color, tags: [], initial: false, count: bucket.nodes.length });
+
+      const selfCore = newCore(0);
+      selfCore.size = 52;
+      selfCore.layer = 'soul';
+      selfCore.content = String(authoredCores.get('self')?.summary || selfSource?.content || '自我记忆的中心');
+      selfCore.sourceLabel = selfSource?.label || '自我';
+      const idMap = new Map([['self', selfCore.id]]);
+      const actualBySourceId = new Map();
+      const coreForLayer = new Map();
+      const regionByLayer = new Map();
+      orderedBuckets.forEach(([key, bucket], index) => {
+        const region = index + 1;
+        const core = newCore(region);
+        core.size = 38;
+        core.layer = bucket.layer;
+        core.branchKey = key;
+        core.content = bucket.descriptor?.summary || bucket.name + ' · ' + bucket.nodes.length + ' 条记忆';
+        core.formationReason = bucket.descriptor?.reason || '';
+        if (bucket.descriptor) idMap.set(bucket.descriptor.id, core.id);
+        core.layerKey = key;
+        coreForLayer.set(key, core);
+        regionByLayer.set(key, region);
+      });
+
+      const addActualNode = (source, region, parent, color, layer, labelOverride = '', slot = 0) => {
+        const originalId = String(source.id ?? 'node:' + memorySequence++);
+        const id = 'real:' + originalId;
+        idMap.set(originalId, id);
+        const direction = branchDirection3D(slot, layer + ':' + region);
+        const radius = region === 0 ? 96 + Math.random() * 62 : 145 + Math.random() * 70;
+        const x = parent.x + direction.x * radius;
+        const y = parent.y + direction.y * radius;
+        const z = parent.z + direction.z * radius;
+        const importance = Number(source.importance || 1);
+        const node = {
+          ...source,
+          id,
+          sourceId: originalId,
+          label: String(labelOverride || source.label || source.title || source.id || '记忆'),
+          color,
+          size: region === 0 ? 6.2 : importance >= 4 ? 4.2 : 1.4 + Math.min(1.8, importance * 0.5),
+          tier: region === 0 ? 'core' : importance >= 4 ? 'major' : importance >= 3 ? 'branch' : 'leaf',
+          isSelfStar: region === 0,
+          layer,
+          region,
+          visible: true,
+          _visible: true,
+          degree: 0,
+          x, y, z, fx: x, fy: y, fz: z,
+        };
+        node.__ambientBase = { x: node.x, y: node.y, z: node.z, phase: hashPhase(id), cx: parent.x, cy: parent.y, cz: parent.z };
+        graphData.nodes.push(node);
+        actualNodes.push(node);
+        actualBySourceId.set(originalId, node);
+        graphData.links.push({ source: parent.id, target: id, color, kind: 'branchMemory', region });
+      };
+
+      // The self core can own its own stars; other soul records are no separate partition.
+      const selfSources = sourceNodes.filter(belongsToSelf);
+      selfSources.forEach((source, slot) => addActualNode(source, 0, selfCore, selfCore.color, 'soul', source.coreId ? source.label : source === selfSource ? '自我叙事' : '自我记忆', slot));
+      for (const [key, bucket] of orderedBuckets) {
+        const region = regionByLayer.get(key);
+        const parent = coreForLayer.get(key);
+        bucket.nodes.forEach((source, slot) => addActualNode(source, region, parent, regions[region].color, bucket.layer, '', slot));
+      }
+
+      const nodeIds = new Set(graphData.nodes.map((node) => node.id));
+      const nodeById = new Map(graphData.nodes.map((node) => [node.id, node]));
+      const corePairs = new Map();
+      const localMemoryPairs = new Set();
+      for (const link of sourceLinks) {
+        const sourceKey = String(typeof link.source === 'object' ? link.source?.id : link.source);
+        const targetKey = String(typeof link.target === 'object' ? link.target?.id : link.target);
+        const sourceId = idMap.get(sourceKey);
+        const targetId = idMap.get(targetKey);
+        if (!sourceId || !targetId || sourceId === targetId || !nodeIds.has(sourceId) || !nodeIds.has(targetId)) continue;
+        const realSource = actualBySourceId.get(sourceKey) || nodeById.get(sourceId);
+        const realTarget = actualBySourceId.get(targetKey) || nodeById.get(targetId);
+        if (!realSource || !realTarget) continue;
+
+        const kind = link.kind || 'related';
+        if (realSource.region === realTarget.region && !realSource.core && !realTarget.core) {
+          const pairKey = [sourceId, targetId].sort().join('\u0000');
+          if (!localMemoryPairs.has(pairKey)) {
+            localMemoryPairs.add(pairKey);
+            graphData.links.push({
+              source: sourceId,
+              target: targetId,
+              color: realSource.color || '#91a9d4',
+              kind: 'memoryAssociation',
+              region: realSource.region,
+              label: link.label || kind,
+            });
+          }
+        } else if (realSource.region !== 0 && realTarget.region !== 0) {
+          const regions = [realSource.region, realTarget.region].sort((a, b) => a - b);
+          const pairKey = regions.join(':');
+          let pair = corePairs.get(pairKey);
+          if (!pair) {
+            pair = { sourceRegion: regions[0], targetRegion: regions[1], count: 0 };
+            corePairs.set(pairKey, pair);
+          }
+          pair.count += 1;
+        }
+
+        if (!realSource.core && !realTarget.core) {
+          realSource.degree += 1; realTarget.degree += 1;
+          actualLinks.push({ source: realSource, target: realTarget, kind, label: link.label || '' });
+        }
+      }
+      for (const pair of corePairs.values()) {
+        const sourceCore = coreByRegion.get(pair.sourceRegion);
+        const targetCore = coreByRegion.get(pair.targetRegion);
+        if (!sourceCore || !targetCore) continue;
+        graphData.links.push({
+          source: sourceCore.id,
+          target: targetCore.id,
+          color: '#e8ddff',
+          kind: 'coreAssociation',
+          relationCount: pair.count,
+          label: `${pair.count} 条分区关联`,
+          visible: true,
+        });
+      }
+
+      allLayers = [...new Set(actualNodes.map((node) => node.layer))].sort((a, b) => layerName(a).localeCompare(layerName(b), 'zh-CN'));
+      if (!activeLayers.size) {
+        const requestedLayers = resetFilters ? null : new URLSearchParams(location.search).get('layers')?.split(',').filter(Boolean);
+        for (const layer of allLayers) if (!requestedLayers || requestedLayers.includes(layer)) activeLayers.add(layer);
+      }
+      else for (const layer of [...activeLayers]) if (!allLayers.includes(layer)) activeLayers.delete(layer);
+      if (currentBrain === 'group') selectedGroup = groupId || selectedGroup;
+      renderLayers();
+      renderTierGuide();
+      renderStats(data.stats || {});
+      renderIndex();
+      updateCounts();
+
+      // Resolve endpoints explicitly before passing them to d3-force. This keeps the
+      // simulation from treating a branch core id such as "core:1" as a node object.
+      for (const link of graphData.links) {
+        const sourceId = typeof link.source === 'object' ? link.source.id : link.source;
+        const targetId = typeof link.target === 'object' ? link.target.id : link.target;
+        link.source = nodeById.get(sourceId);
+        link.target = nodeById.get(targetId);
+      }
+      graphData.links = graphData.links.filter((link) => link.source && link.target);
+      graphLoaded = true;
+
+      if (!graphData.nodes.length) {
+        note.textContent = '已连接真实记忆数据 · 当前还没有记忆';
+      }
+      syncGraphData();
+      applyVisibility();
+      updateHud();
+      setTimeout(() => { addGlow(); if (!wasLoaded || !userMovedCamera) fitView(); }, 500);
+      const requestedId = new URLSearchParams(location.search).get('node');
+      const aliasMatches = actualNodes.filter((node) => node.aliases?.includes(requestedId));
+      const requestedNode = actualNodes.find((node) => node.sourceId === requestedId) || (aliasMatches.length === 1 ? aliasMatches[0] : null);
+      if (requestedNode) setTimeout(() => showNode(requestedNode, true), 700);
+    }
+
+    async function loadLiveGraph({ resetFilters = false } = {}) {
+      const requestId = ++graphRequestId;
+      const requestedBrain = currentBrain;
+      const requestedGroup = selectedGroup;
+      const requestParams = new URLSearchParams(location.search);
+      requestParams.delete('demo');
+      requestParams.delete('v');
+      if (requestedBrain === 'group' && requestedGroup) requestParams.set('groupId', requestedGroup);
+      else requestParams.delete('groupId');
+      const queryString = requestParams.toString();
+      const url = '/love-companion/api/graph' + (queryString ? '?' + queryString : '');
+      note.textContent = '正在读取真实记忆…';
+      try {
+        const response = await fetch(url, { cache: 'no-store' });
+        if (!response.ok) throw new Error('HTTP ' + response.status);
+        const data = await response.json();
+        if (!Array.isArray(data.nodes) || !Array.isArray(data.links)) throw new Error('记忆数据格式无效');
+        if (requestId !== graphRequestId || requestedBrain !== currentBrain || (requestedBrain === 'group' && requestedGroup !== selectedGroup)) return false;
+        buildLiveGraph(data, { resetFilters, groupId: requestedGroup });
+        loading.classList.add('hide');
+        if (data.version) sourceVersion = data.version;
+        loadedBrain = requestedBrain;
+        loadedGroup = requestedGroup;
+        syncURL();
+        return true;
+      } catch (error) {
+        if (requestId !== graphRequestId) return false;
+        note.textContent = '读取失败：' + (error?.message || '本地记忆服务暂不可用');
+        if (graphLoaded) {
+          currentBrain = loadedBrain;
+          selectedGroup = loadedGroup;
+          document.getElementById('brain-private').setAttribute('aria-pressed', String(currentBrain === 'private'));
+          document.getElementById('brain-group').setAttribute('aria-pressed', String(currentBrain === 'group'));
+          const select = document.getElementById('brain-group-select');
+          select.hidden = currentBrain !== 'group';
+          if (loadedGroup) select.value = loadedGroup;
+          loading.classList.add('hide');
+          notify('切换失败，已保留当前星图：' + (error?.message || '本地记忆服务暂不可用'));
+        } else {
+          loading.classList.remove('hide');
+          loading.replaceChildren(document.createTextNode('读取记忆失败。请检查本地服务后重试。'));
+        }
+        return false;
+      }
+    }
+
+    function layerName(layer) {
+      return layerDetails[layer]?.[0] || layer || '其他';
+    }
+
+    function layerColor(layer) {
+      return layerDetails[layer]?.[1] || COLORS[layer] || '#9bb3ff';
+    }
+
+    function matchesQuery(node) {
+      if (!query.trim()) return true;
+      const haystack = [node.label, node.title, node.content, node.project, node.subcategory,
+        ...(Array.isArray(node.keywords) ? node.keywords : [node.keywords || ''])].join(' ').toLocaleLowerCase();
+      return haystack.includes(query.trim().toLocaleLowerCase());
+    }
+
+    function renderLayers() {
+      const target = document.getElementById('layers');
+      target.replaceChildren();
+      for (const layer of allLayers) {
+        const row = document.createElement('label');
+        row.className = 'layer' + (activeLayers.has(layer) ? '' : ' off');
+        row.style.setProperty('--layer', layerColor(layer));
+        const input = document.createElement('input');
+        input.type = 'checkbox';
+        input.checked = activeLayers.has(layer);
+        input.setAttribute('aria-label', '显示图层：' + layerName(layer));
+        input.addEventListener('change', () => {
+          input.checked ? activeLayers.add(layer) : activeLayers.delete(layer);
+          row.classList.toggle('off', !input.checked);
+          applyVisibility();
+          syncURL();
+        });
+        const dot = document.createElement('i'); dot.className = 'layer-dot';
+        const name = document.createElement('span'); name.textContent = layerName(layer);
+        const count = document.createElement('span'); count.className = 'layer-count';
+        count.textContent = String(actualNodes.filter((node) => node.layer === layer).length);
+        const check = document.createElement('i'); check.className = 'layer-check';
+        row.append(input, dot, name, count, check);
+        target.append(row);
+      }
+      document.getElementById('toggle-layers').textContent = allLayers.every((layer) => activeLayers.has(layer)) ? '取消全选' : '全部显示';
+    }
+
+    function renderTierGuide() {
+      const guide = document.getElementById('tier-guide');
+      guide.replaceChildren();
+      for (const [label, color, size] of [['核心', '#ffd9a8', 10], ['重要记忆', '#7bdcff', 7], ['普通记忆', '#b5a2ff', 4]]) {
+        const item = document.createElement('span');
+        const dot = document.createElement('i');
+        dot.style.cssText = `width:${size}px;height:${size}px;background:${color};box-shadow:0 0 9px ${color}`;
+        item.append(dot, document.createTextNode(label));
+        guide.append(item);
+      }
+    }
+
+    function renderStats(stats = {}) {
+      const target = document.getElementById('stats');
+      const visible = actualNodes.filter((node) => node._visible);
+      const values = [
+        [visible.length, '可见记忆'],
+        [allLayers.length, '记忆图层'],
+        [actualLinks.filter((link) => link.source._visible && link.target._visible).length, '记忆关联'],
+      ];
+      target.replaceChildren();
+      for (const [value, label] of values) {
+        const item = document.createElement('div');
+        const number = document.createElement('b'); number.textContent = new Intl.NumberFormat('zh-CN').format(value);
+        const caption = document.createElement('span'); caption.textContent = label;
+        item.append(number, caption); target.append(item);
+      }
+      document.getElementById('index-title').hidden = false;
+      document.getElementById('index-title').textContent = stats.truncated ? `探索记忆 · 已省略 ${stats.truncated} 条` : '探索记忆';
+    }
+
+    function updateCounts() {
+      renderStats();
+      updateHud();
+    }
+
+    function applyVisibility() {
+      for (const node of actualNodes) {
+        node._visible = activeLayers.has(node.layer) && matchesQuery(node);
+        node.visible = node._visible;
+      }
+      for (const core of graphData.nodes.filter((node) => node.core)) {
+        core.visible = core.region === 0 || actualNodes.some((node) => node.region === core.region && node._visible);
+      }
+      for (const link of graphData.links) {
+        const source = typeof link.source === 'object' ? link.source : graphData.nodes.find((node) => node.id === link.source);
+        const target = typeof link.target === 'object' ? link.target : graphData.nodes.find((node) => node.id === link.target);
+        link.visible = Boolean(source?.visible && target?.visible);
+      }
+      if (selectedNode && !selectedNode._visible) closeNode();
+      if (Graph && graphLoaded) Graph.refresh();
+      updateLabels();
+      renderIndex();
+      updateCounts();
+      document.getElementById('stage-empty').hidden = actualNodes.some((node) => node._visible) || currentView !== 'graph';
+    }
+
+    function sortedVisibleNodes() {
+      return actualNodes.filter((node) => node._visible).sort((a, b) => {
+        if (sortMode === 'name') return a.label.localeCompare(b.label, 'zh-CN');
+        if (sortMode === 'importance') return (b.importance || 0) - (a.importance || 0) || b.degree - a.degree;
+        return b.degree - a.degree || (b.importance || 0) - (a.importance || 0);
+      });
+    }
+
+    function makeMemoryRow(node, detailed = false, relationship = '') {
+      const button = document.createElement('button');
+      button.type = 'button'; button.className = 'node-row';
+      button.style.setProperty('--layer', layerColor(node.layer));
+      const dot = document.createElement('i'); dot.className = 'layer-dot';
+      const copy = document.createElement('span'); copy.className = 'node-copy';
+      const title = document.createElement('strong'); title.textContent = node.label || '无标题记忆';
+      const meta = document.createElement('small');
+      meta.textContent = `${layerName(node.layer)} · ${relationship || node.degree + ' 条关联'}`;
+      copy.append(title, meta);
+      if (detailed) {
+        const excerpt = document.createElement('span'); excerpt.className = 'node-excerpt';
+        excerpt.textContent = node.content || '这段记忆暂无正文。'; copy.append(excerpt);
+      }
+      button.append(dot, copy);
+      button.addEventListener('click', () => showNode(node, true));
+      return button;
+    }
+
+    function renderSearchResults() {
+      const card = document.getElementById('search-results');
+      card.replaceChildren();
+      if (!query.trim()) { card.hidden = true; return; }
+      const matches = actualNodes.filter((node) => matchesQuery(node)).slice(0, 8);
+      if (!matches.length) {
+        const empty = document.createElement('p'); empty.textContent = '没有匹配的记忆'; card.append(empty);
+      } else {
+        for (const node of matches) {
+          const button = document.createElement('button'); button.type = 'button';
+          const title = document.createElement('span'); title.textContent = node.label;
+          const meta = document.createElement('small'); meta.textContent = layerName(node.layer) + ' · ' + node.degree + ' 条关联';
+          button.append(title, meta);
+          button.addEventListener('click', () => {
+            activeLayers.add(node.layer); query = ''; document.getElementById('q').value = '';
+            document.getElementById('search-results').hidden = true;
+            applyVisibility(); showNode(node, true);
+          });
+          card.append(button);
+        }
+      }
+      card.hidden = false;
+    }
+
+    function renderIndex() {
+      renderSearchResults();
+      const visible = sortedVisibleNodes();
+      const title = document.getElementById('index-title');
+      title.textContent = query.trim() ? `搜索结果 (${visible.length})` : '探索记忆';
+      const count = Math.max(0, Number(document.getElementById('index-list').dataset.pageSize || 60));
+      for (const [id, detailed] of [['index-list', false], ['memory-list', true]]) {
+        const target = document.getElementById(id); target.replaceChildren();
+        const fragment = document.createDocumentFragment();
+        for (const node of visible.slice(0, count)) fragment.append(makeMemoryRow(node, detailed));
+        if (visible.length > count) {
+          const more = document.createElement('button'); more.className = 'detail-back';
+          more.textContent = `加载更多 (${visible.length - count})`;
+          more.addEventListener('click', () => { document.getElementById('index-list').dataset.pageSize = String(count + 60); renderIndex(); });
+          fragment.append(more);
+        }
+        target.append(fragment);
+        if (!visible.length) target.innerHTML = '<div class="empty">没有找到相关记忆<small>调整搜索词或重新选择图层。</small></div>';
+      }
+    }
+
+    function setPanelState(open) {
+      document.getElementById('inspector').classList.toggle('has-selection', open);
+      panel.classList.toggle('show', open);
+      document.getElementById('close').hidden = !open;
+      document.getElementById('index-caption').hidden = open;
+      document.getElementById('inspector-title').textContent = open ? '记忆详情' : '星海概览';
+    }
+
+    function syncURL() {
+      const state = new URLSearchParams(location.search);
+      for (const key of ['q', 'layers', 'view', 'node']) state.delete(key);
+      if (query) state.set('q', query);
+      if (activeLayers.size !== allLayers.length) state.set('layers', [...activeLayers].join(','));
+      if (currentView !== 'graph') state.set('view', currentView);
+      if (selectedNode?.sourceId) state.set('node', selectedNode.sourceId);
+      if (currentBrain === 'group' && selectedGroup) state.set('groupId', selectedGroup);
+      else state.delete('groupId');
+      history.replaceState(null, '', location.pathname + (state.size ? '?' + state.toString() : '') + location.hash);
+    }
+
+    function notify(message) {
+      const toast = document.getElementById('toast');
+      clearTimeout(toastTimer); toast.textContent = message; toast.hidden = false;
+      toastTimer = setTimeout(() => { toast.hidden = true; }, 3600);
+    }
+
+    function showNode(node, focus = false) {
+      if (!node._visible) {
+        activeLayers.add(node.layer); query = ''; document.getElementById('q').value = '';
+        renderLayers(); applyVisibility();
+      }
+      selectedNode = node;
+      document.getElementById('tag').textContent = layerName(node.layer) + (node.project ? ' · ' + node.project : '');
+      document.getElementById('title').textContent = node.label || '无标题记忆';
+      document.getElementById('body').textContent = node.content || '这段记忆暂无正文。';
+      const importance = Number(node.importance || 0);
+      const importanceLabel = importance >= 4 ? '核心记忆' : importance >= 3 ? '重要记忆' : importance >= 2 ? '普通记忆' : '日常记忆';
+      document.getElementById('detail-facts').innerHTML = `<div><span>重要程度</span>${importance}/${node.coreId ? 5 : 4} · ${importanceLabel}</div><div><span>网络位置</span>${node.degree} 条关联</div>`;
+      const meta = [node.type && '类型：' + node.type, node.subcategory && '子类：' + node.subcategory,
+        node.epistemic && '认知类型：' + ({ reported: '转述', inferred: '理解/推测', experienced: '经历' }[node.epistemic] || node.epistemic),
+        node.sources?.length ? '来源依据 ' + (node.sourceCount || node.sources.length) + ' 处：' + node.sources.map(source => source.reference).join('；') : node.source?.reference && '来源：' + node.source.reference,
+        node.supersedes?.length && '保留取代历史：' + node.supersedes.length + ' 条',
+        node.status && node.status !== 'active' && '状态：' + node.status].filter(Boolean);
+      document.getElementById('meta').textContent = meta.join(' · ');
+      const keywords = Array.isArray(node.keywords) ? node.keywords : String(node.keywords || '').split(/[，,\s]+/).filter(Boolean);
+      const kw = document.getElementById('kw'); kw.replaceChildren();
+      for (const word of keywords.slice(0, 20)) { const chip = document.createElement('span'); chip.textContent = word; kw.append(chip); }
+      document.getElementById('keyword-section').hidden = !keywords.length;
+      const related = document.getElementById('related'); related.replaceChildren();
+      const neighbors = actualLinks.filter((link) => link.source === node || link.target === node)
+        .map((link) => ({ node: link.source === node ? link.target : link.source, kind: link.kind }))
+        .sort((a, b) => b.node.degree - a.node.degree).slice(0, 12);
+      document.getElementById('related-title').hidden = !neighbors.length;
+      for (const item of neighbors) related.append(makeMemoryRow(item.node, false, item.kind || '相关记忆'));
+      setPanelState(true); panel.scrollTop = 0; syncURL(); updateHud();
+      if (focus) {
+        const camera = Graph.camera(); const target = Graph.controls().target;
+        const dx = camera.position.x - target.x, dy = camera.position.y - target.y, dz = camera.position.z - target.z;
+        Graph.cameraPosition({ x: node.x + dx, y: node.y + dy, z: node.z + dz }, { x: node.x, y: node.y, z: node.z }, 500);
+        userMovedCamera = true;
+      }
+      if (matchMedia('(max-width: 660px)').matches) document.getElementById('inspector').classList.add('has-selection');
+    }
+
+    function showBranch(core, branchNodes) {
+      selectedNode = core;
+      document.getElementById('tag').textContent = '记忆分支';
+      document.getElementById('title').textContent = core.label;
+      document.getElementById('body').textContent = `${core.content || ''}\n${branchNodes.length} 条属于「${core.label}」的记忆。${core.formationReason ? '\n形成理由：' + core.formationReason : ''}`;
+      document.getElementById('detail-facts').innerHTML = `<div><span>分支记忆</span>${branchNodes.length} 条</div><div><span>图层</span>${layerName(core.layer)}</div>`;
+      document.getElementById('meta').textContent = '';
+      document.getElementById('keyword-section').hidden = true;
+      document.getElementById('related-title').hidden = !branchNodes.length;
+      const related = document.getElementById('related'); related.replaceChildren();
+      branchNodes.sort((a, b) => b.importance - a.importance || b.degree - a.degree).slice(0, 40).forEach((node) => related.append(makeMemoryRow(node, false)));
+      setPanelState(true); panel.scrollTop = 0; syncURL(); updateHud();
+    }
+
+    function closeNode() {
+      selectedNode = null; setPanelState(false); syncURL(); updateHud();
+    }
+
+    function setView(view, sync = true) {
+      currentView = view === 'list' ? 'list' : 'graph';
+      const stage = document.getElementById('main');
+      stage.classList.toggle('list-view', currentView === 'list');
+      document.getElementById('memory-list').hidden = currentView !== 'list';
+      document.getElementById('view-graph').setAttribute('aria-pressed', String(currentView === 'graph'));
+      document.getElementById('view-list').setAttribute('aria-pressed', String(currentView === 'list'));
+      if (sync) syncURL();
+    }
+
+    function setZoom(distance) {
+      const camera = Graph.camera(); const target = Graph.controls().target;
+      const dx = camera.position.x - target.x, dy = camera.position.y - target.y, dz = camera.position.z - target.z;
+      const current = Math.max(1, Math.hypot(dx, dy, dz));
+      const next = Math.max(140, Math.min(3400, distance));
+      const scale = next / current;
+      Graph.cameraPosition({ x: target.x + dx * scale, y: target.y + dy * scale, z: target.z + dz * scale }, target, 250);
+      document.getElementById('zoom-value').textContent = Math.round(homeDistance / next * 100) + '%';
+      userMovedCamera = true;
+    }
+
+    function resetView(announce = true) {
+      userMovedCamera = false;
+      fitView();
+      if (announce) notify('已复位星图视角');
+    }
+
+    function setMotion(enabled) {
+      motionEnabled = enabled;
+      document.body.classList.toggle('motion-paused', !enabled);
+      for (const id of ['motion', 'motion-main']) {
+        const button = document.getElementById(id);
+        const label = enabled ? '暂停动画' : '继续动画';
+        button.setAttribute('aria-pressed', String(!enabled));
+        button.setAttribute('aria-label', label);
+        button.title = label;
+        button.querySelector('span').textContent = label;
+        button.querySelector('use').setAttribute('href', enabled ? '#i-pause' : '#i-play');
+      }
+    }
+
+    async function loadGroups() {
+      const select = document.getElementById('brain-group-select');
+      try {
+        const response = await fetch('/love-companion/api/groups', { cache: 'no-store' });
+        const data = await response.json();
+        if (!data.ok || !Array.isArray(data.items)) return;
+        select.replaceChildren();
+        for (const group of data.items) {
+          const option = document.createElement('option'); option.value = String(group.id);
+          option.textContent = `群 ${group.id}（${group.members} 人）`; select.append(option);
+        }
+        if (selectedGroup) select.value = selectedGroup;
+        selectedGroup = select.value || '';
+        select.hidden = currentBrain !== 'group';
+      } catch { /* 群列表不可用时保留私聊图谱 */ }
+    }
+
+    function switchBrain(next) {
+      const select = document.getElementById('brain-group-select');
+      if (next === 'group' && !select.value) { notify('当前没有可显示的群记忆'); return; }
+      select.hidden = next !== 'group';
+      const changed = next !== currentBrain;
+      currentBrain = next;
+      document.getElementById('brain-private').setAttribute('aria-pressed', String(next === 'private'));
+      document.getElementById('brain-group').setAttribute('aria-pressed', String(next === 'group'));
+      if (next === 'group') selectedGroup = select.value;
+      userMovedCamera = false;
+      loadLiveGraph({ resetFilters: changed });
+    }
+
+    async function refreshGraph() {
+      const button = document.getElementById('refresh');
+      if (button.disabled) return;
+      button.disabled = true; button.querySelector('span').textContent = '正在读取…';
+      const loaded = await loadLiveGraph();
+      button.disabled = false; button.querySelector('span').textContent = '刷新记忆';
+      button.classList.remove('has-update');
+      notify(loaded ? '记忆已刷新' : '读取失败，请检查本地服务后重试');
+    }
+
+    async function checkUpdates() {
+      if (document.hidden) return;
+      try {
+        const response = await fetch('/love-companion/api/graph/status', { cache: 'no-store' });
+        const status = await response.json();
+        if (!status.ok || !status.version) return;
+        if (sourceVersion == null) sourceVersion = status.version;
+        else if (status.stale || status.version !== sourceVersion) {
+          const button = document.getElementById('refresh'); button.classList.add('has-update');
+          if (motionEnabled && !selectedNode && !document.body.classList.contains('sidebar-open')) await loadLiveGraph();
+        }
+      } catch { /* 更新提示不影响已加载的图谱 */ }
+    }
+
+    function bindWorkspace() {
+      document.getElementById('q').value = query;
+      document.getElementById('brain-private').setAttribute('aria-pressed', String(currentBrain === 'private'));
+      document.getElementById('brain-group').setAttribute('aria-pressed', String(currentBrain === 'group'));
+      document.getElementById('brain-group-select').hidden = currentBrain !== 'group';
+      document.getElementById('q').addEventListener('input', (event) => {
+        query = event.target.value; applyVisibility(); syncURL();
+      });
+      document.getElementById('q').addEventListener('keydown', (event) => { if (event.key === 'Escape') { query = ''; event.target.value = ''; applyVisibility(); syncURL(); } });
+      document.getElementById('refresh').addEventListener('click', refreshGraph);
+      document.getElementById('toggle-layers').addEventListener('click', () => {
+        if (allLayers.every((layer) => activeLayers.has(layer))) activeLayers.clear();
+        else for (const layer of allLayers) activeLayers.add(layer);
+        renderLayers(); applyVisibility(); syncURL();
+      });
+      document.getElementById('view-graph').addEventListener('click', () => setView('graph'));
+      document.getElementById('view-list').addEventListener('click', () => setView('list'));
+      document.getElementById('sort').addEventListener('change', (event) => { sortMode = event.target.value; renderIndex(); });
+      document.getElementById('brain-private').addEventListener('click', () => switchBrain('private'));
+      document.getElementById('brain-group').addEventListener('click', () => switchBrain('group'));
+      document.getElementById('brain-group-select').addEventListener('change', (event) => {
+        selectedGroup = event.target.value; userMovedCamera = false;
+        if (currentBrain === 'group') {
+          loadLiveGraph({ resetFilters: true });
+        }
+      });
+      document.getElementById('zoom-in').addEventListener('click', () => setZoom(Graph.controls().target.distanceTo(Graph.camera().position) / 1.18));
+      document.getElementById('zoom-out').addEventListener('click', () => setZoom(Graph.controls().target.distanceTo(Graph.camera().position) * 1.18));
+      document.getElementById('reset-view').addEventListener('click', () => resetView());
+      document.getElementById('motion').addEventListener('click', () => setMotion(!motionEnabled));
+      document.getElementById('motion-main').addEventListener('click', () => setMotion(!motionEnabled));
+      document.getElementById('close').addEventListener('click', closeNode);
+      document.getElementById('back-to-index').addEventListener('click', closeNode);
+      document.getElementById('menu').addEventListener('click', () => setSidebar(!document.body.classList.contains('sidebar-open')));
+      document.getElementById('dismiss-menu').addEventListener('click', () => setSidebar(false));
+      document.addEventListener('pointerdown', (event) => {
+        if (document.body.classList.contains('sidebar-open') && !event.target.closest('#sidebar, #menu')) setSidebar(false);
+      });
+      document.addEventListener('keydown', (event) => {
+        if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'k') { event.preventDefault(); document.getElementById('q').focus(); }
+        if (event.key === 'Escape') { if (selectedNode) closeNode(); else if (query) { query = ''; document.getElementById('q').value = ''; applyVisibility(); syncURL(); } }
+      });
+      window.addEventListener('resize', () => { setSidebar(document.body.classList.contains('sidebar-open')); buildSky(); drawSky(0); Graph.width(document.getElementById('scene').clientWidth).height(document.getElementById('scene').clientHeight); updateLabels(); });
+      document.addEventListener('visibilitychange', () => { if (!document.hidden) checkUpdates(); });
+      document.getElementById('brain-group-select').value = selectedGroup;
+      setSidebar(false); setMotion(motionEnabled); setView(urlState.get('view'), false);
+    }
+
+    function setSidebar(open) {
+      document.body.classList.toggle('sidebar-open', open);
+      document.getElementById('menu').setAttribute('aria-expanded', String(open));
+      document.getElementById('menu').setAttribute('aria-label', open ? '关闭功能面板' : '打开功能面板');
+      document.getElementById('sidebar').inert = matchMedia('(max-width: 960px)').matches && !open;
+    }
+
+    function hashPhase(value) {
+      let hash = 2166136261;
+      for (let i = 0; i < value.length; i += 1) hash = Math.imul(hash ^ value.charCodeAt(i), 16777619);
+      hash = Math.imul(hash ^ (hash >>> 16), 0x85ebca6b);
+      hash = Math.imul(hash ^ (hash >>> 13), 0xc2b2ae35);
+      hash ^= hash >>> 16;
+      return (hash >>> 0) / 4294967295 * Math.PI * 2;
+    }
+
+    function randomDirection3D() {
+      const y = Math.random() * 2 - 1;
+      const angle = Math.random() * Math.PI * 2;
+      const planar = Math.sqrt(1 - y * y);
+      return { x: planar * Math.cos(angle), y, z: planar * Math.sin(angle) };
+    }
+
+    function branchDirection3D(slot, branchKey) {
+      // Golden-angle samples cover the whole sphere as memories arrive, instead of
+      // allowing a short random sample to collapse into one fan-shaped hemisphere.
+      const fraction = ((slot + 0.5) * 0.7548776662466927) % 1;
+      const y = 1 - 2 * fraction;
+      const planar = Math.sqrt(Math.max(0, 1 - y * y));
+      const phase = hashPhase(String(branchKey));
+      const angle = slot * 2.399963229728653 + phase;
+      const x0 = planar * Math.cos(angle);
+      const z0 = planar * Math.sin(angle);
+      const tilt = Math.sin(phase * 1.71) * 0.72;
+      const yaw = hashPhase(String(branchKey) + ':yaw');
+      const y1 = y * Math.cos(tilt) - z0 * Math.sin(tilt);
+      const z1 = y * Math.sin(tilt) + z0 * Math.cos(tilt);
+      const jitter = () => (Math.random() - 0.5) * 0.16;
+      const x = x0 * Math.cos(yaw) + z1 * Math.sin(yaw) + jitter();
+      const yy = y1 + jitter();
+      const z = -x0 * Math.sin(yaw) + z1 * Math.cos(yaw) + jitter();
+      const length = Math.hypot(x, yy, z) || 1;
+      return { x: x / length, y: yy / length, z: z / length };
+    }
+
+    const branchPulls = new Map();
+
+    function moveWithDamping(node, x, y, z, dt) {
+      // Velocity belongs to our small spring solver, independently of d3's layout.
+      const state = node.__elastic ??= { x: 0, y: 0, z: 0 };
+      const steps = Math.max(1, Math.ceil(dt / (1 / 120)));
+      const step = dt / steps;
+      const drag = Math.exp(-5.5 * step);
+      const stiffness = node.core ? 15 : 18;
+      for (let i = 0; i < steps; i += 1) {
+        state.x = (state.x + (x - node.x) * stiffness * step) * drag;
+        state.y = (state.y + (y - node.y) * stiffness * step) * drag;
+        state.z = (state.z + (z - node.z) * stiffness * step) * drag;
+        node.x += state.x * step;
+        node.y += state.y * step;
+        node.z += state.z * step;
+      }
+      node.fx = node.x; node.fy = node.y; node.fz = node.z;
+      node.vx = 0; node.vy = 0; node.vz = 0;
+    }
+
+    function startElasticDrag(node) {
+      node.__manualDragging = true;
+      branchPulls.set(node.region, node);
+    }
+
+    function endElasticDrag(node) {
+      node.__manualDragging = false;
+      if (branchPulls.get(node.region) === node) branchPulls.delete(node.region);
+      // Keep the original home/ambient anchor: release must return, never rebase.
+      node.fx = node.x; node.fy = node.y; node.fz = node.z;
+    }
+
+    // Breathing supplies moving targets; springs give the stars lag and recovery.
+    function updateBranchStar(node, core, seconds, dt) {
+      if (node.__manualDragging) return;
+      if (node.core) {
+        const home = node.__homePosition;
+        if (home) moveWithDamping(node, home.x, home.y, home.z, dt);
+        return;
+      }
+      const base = node.__ambientBase;
+      if (!base || !core) return;
+      base.cx ??= core.x; base.cy ??= core.y; base.cz ??= core.z;
+      const dx = base.x - base.cx, dy = base.y - base.cy, dz = base.z - base.cz;
+      const radius = Math.hypot(dx, dy, dz) || 1;
+      const phase = base.phase;
+      const branchPhase = core.__breathPhase ??= hashPhase('breath:' + core.id);
+      const breath = Math.sin(seconds * Math.PI * 2 / 8.5 + branchPhase);
+      const wave = Math.sin(seconds * 0.64 + phase + radius * 0.012);
+      const stretch = 1 + breath * 0.36 + wave * 0.055;
+      const amplitude = node.isSelfStar ? 17 : 22;
+      // Different smooth local waves flex the connecting strands without jitter.
+      const wx = Math.sin(seconds * 0.57 + phase) * amplitude;
+      const wy = Math.sin(seconds * 0.43 + phase * 1.41) * amplitude;
+      const wz = Math.cos(seconds * 0.51 + phase * 0.77) * amplitude;
+      const radial = (wx * dx + wy * dy + wz * dz) / (radius * radius);
+      const target = node.__motionTarget ??= { x: 0, y: 0, z: 0 };
+      target.x = core.x + dx * stretch + wx - dx * radial;
+      target.y = core.y + dy * stretch + wy - dy * radial;
+      target.z = core.z + dz * stretch + wz - dz * radial;
+      let pullX = 0, pullY = 0, pullZ = 0;
+      const pulled = branchPulls.get(node.region);
+      if (pulled && !pulled.core && pulled.__motionTarget && pulled.__ambientBase) {
+        const rest = pulled.__ambientBase;
+        const distance = Math.hypot(base.x - rest.x, base.y - rest.y, base.z - rest.z);
+        const weight = 0.35 * Math.exp(-distance / 180);
+        pullX = (pulled.x - pulled.__motionTarget.x) * weight;
+        pullY = (pulled.y - pulled.__motionTarget.y) * weight;
+        pullZ = (pulled.z - pulled.__motionTarget.z) * weight;
+      }
+      moveWithDamping(node, target.x + pullX, target.y + pullY, target.z + pullZ, dt);
+      node.__breathScale = 1 + breath * 0.30 + wave * 0.035;
+    }
+
+    let motionSeconds = 0;
+    // Straight links and travelling particles, batched into two draw calls.
+    function createBatchedFlow(Graph, getData) {
+      const lineGeometry = new THREE.BufferGeometry();
+      const particleGeometry = new THREE.BufferGeometry();
+      const lineMaterial = new THREE.LineBasicMaterial({ vertexColors: true, transparent: true, opacity: 0.66, depthWrite: false });
+      const dot = document.createElement('canvas'); dot.width = dot.height = 32;
+      const context = dot.getContext('2d');
+      const gradient = context.createRadialGradient(16, 16, 0, 16, 16, 16);
+      gradient.addColorStop(0, '#ffffff'); gradient.addColorStop(0.25, '#ffffff');
+      gradient.addColorStop(0.5, '#ffffff99'); gradient.addColorStop(1, '#ffffff00');
+      context.fillStyle = gradient; context.fillRect(0, 0, 32, 32);
+      const texture = new THREE.CanvasTexture(dot);
+      const particleMaterial = new THREE.PointsMaterial({ map: texture, color: '#c5f9ff', size: 6, sizeAttenuation: false, transparent: true, opacity: 0.95, blending: THREE.AdditiveBlending, depthWrite: false });
+      const lines = new THREE.LineSegments(lineGeometry, lineMaterial);
+      const particles = new THREE.Points(particleGeometry, particleMaterial);
+      lines.frustumCulled = particles.frustumCulled = false;
+      lines.raycast = particles.raycast = () => {};
+      Graph.scene().add(lines, particles);
+      let lastLinks, lastCount = -1;
+      let positions, colors, photons;
+      const scratchColor = new THREE.Color();
+      const colorCache = new Map();
+      function update(seconds) {
+        const data = getData();
+        if (lastLinks !== data.links || lastCount !== data.links.length) {
+          lastLinks = data.links; lastCount = data.links.length;
+          lineGeometry.dispose(); particleGeometry.dispose();
+          positions = new Float32Array(lastCount * 6);
+          colors = new Float32Array(lastCount * 6);
+          photons = new Float32Array(lastCount * 6);
+          lineGeometry.setAttribute('position', new THREE.BufferAttribute(positions, 3).setUsage(THREE.DynamicDrawUsage));
+          lineGeometry.setAttribute('color', new THREE.BufferAttribute(colors, 3).setUsage(THREE.DynamicDrawUsage));
+          particleGeometry.setAttribute('position', new THREE.BufferAttribute(photons, 3).setUsage(THREE.DynamicDrawUsage));
+        }
+        let lineCount = 0, particleCount = 0;
+        for (let index = 0; index < data.links.length; index += 1) {
+          const link = data.links[index];
+          const source = link.source, target = link.target;
+          if (link.visible === false || !source || !target || source.visible === false || target.visible === false || !Number.isFinite(source.x) || !Number.isFinite(target.x)) continue;
+          const offset = lineCount * 6;
+          positions[offset] = source.x; positions[offset + 1] = source.y; positions[offset + 2] = source.z;
+          positions[offset + 3] = target.x; positions[offset + 4] = target.y; positions[offset + 5] = target.z;
+          const key = link.color || '#91b6d6';
+          let color = colorCache.get(key);
+          if (!color) { scratchColor.set(key); color = [scratchColor.r, scratchColor.g, scratchColor.b]; colorCache.set(key, color); }
+          const coreLink = link.kind === 'coreBridge' || link.kind === 'coreAssociation';
+          const brightness = (coreLink ? 1 : 0.72) * (1 + (link.__hoverLevel || 0));
+          for (let end = 0; end < 2; end += 1) {
+            for (let axis = 0; axis < 3; axis += 1) colors[offset + end * 3 + axis] = Math.min(1, color[axis] * brightness);
+          }
+          lineCount += 1;
+          const count = coreLink ? 2 : 1;
+          for (let particle = 0; particle < count; particle += 1) {
+            const progress = (seconds / 9 + index * 0.61803398875 + particle / count) % 1;
+            const at = particleCount++ * 3;
+            photons[at] = source.x + (target.x - source.x) * progress;
+            photons[at + 1] = source.y + (target.y - source.y) * progress;
+            photons[at + 2] = source.z + (target.z - source.z) * progress;
+          }
+        }
+        lineGeometry.setDrawRange(0, lineCount * 2);
+        particleGeometry.setDrawRange(0, particleCount);
+        lineGeometry.attributes.position.needsUpdate = true;
+        lineGeometry.attributes.color.needsUpdate = true;
+        particleGeometry.attributes.position.needsUpdate = true;
+      }
+      return { update };
+    }
+
+
+    function syncGraphData() {
+      if (!Graph) return;
+      const nodesById = new Map(graphData.nodes.map((node) => [node.id, node]));
+      for (const link of graphData.links) {
+        if (typeof link.source !== 'object') link.source = nodesById.get(link.source);
+        if (typeof link.target !== 'object') link.target = nodesById.get(link.target);
+      }
+      // A fresh object and fresh arrays are required for ForceGraph's change detection.
+      Graph.graphData({ nodes: graphData.nodes.slice(), links: graphData.links.slice() });
+    }
+
+    function ensureCore(index, refresh = true) {
+      if (coreByRegion.has(index)) return coreByRegion.get(index);
+      const core = newCore(index);
+      connectDemoCores(index);
+      if (refresh && Graph) syncGraphData();
+      updateHud();
+      return core;
+    }
+
+    function addMemory(index, tag, sequence) {
+      const core = ensureCore(index, false);
+      const data = regionData.get(index);
+      const siblings = data.nodes;
+      const direction = branchDirection3D(siblings.length, regions[index].name);
+      const radius = index === 0 ? 96 + Math.random() * 62 : 145 + Math.random() * 70;
+      const x = core.x + direction.x * radius;
+      const y = core.y + direction.y * radius;
+      const z = core.z + direction.z * radius;
+      const node = { id: 'm:' + memorySequence++, label: regions[index].name + ' · ' + tag, color: regions[index].color,
+        size: index === 0 ? 6.2 : 1.4 + Math.random() * 1.8, region: index, isSelfStar: index === 0, tags: [tag, regions[index].name], sequence, visible: true,
+        x, y, z, fx: x, fy: y, fz: z };
+      node.__ambientBase = { x: node.x, y: node.y, z: node.z, phase: hashPhase(node.id), cx: core.x, cy: core.y, cz: core.z };
+      const link = { source: core.id, target: node.id, color: regions[index].color, kind: 'branchMemory', region: index, visible: true };
+      graphData.nodes.push(node); graphData.links.push(link); siblings.push(node);
+      data.links.push(link); data.tagCounts.set(tag, (data.tagCounts.get(tag) || 0) + 1);
+      // Keep related stars woven inside their own partition. Cross-partition stars
+      // are never linked directly; those relations are represented by core links.
+      const relatedStar = siblings.slice(0, -1).filter((item) => item.tags[0] === tag).at(-1)
+        || siblings.at(-2);
+      if (relatedStar) {
+        const starLink = { source: relatedStar.id, target: node.id, color: regions[index].color, kind: 'memoryAssociation', region: index, visible: true };
+        graphData.links.push(starLink); data.links.push(starLink);
+      }
+      updateHud();
+    }
+
+    // Replaceable ingestion boundary for real journal/life/learning/network events.
+    function ingestMemories(items) {
+      for (const item of items) addMemory(item.region, item.tag, item.sequence ?? memorySequence);
+      if (Graph && items.length) {
+        syncGraphData();
+        setTimeout(addGlow, 350);
+      }
+    }
+
+    function updateLabels() {
+      const selfCore = coreByRegion.get(0);
+      const center = selfCore ? Graph.graph2ScreenCoords(selfCore.x, selfCore.y, selfCore.z) : null;
+      for (const { el, core } of labels) {
+        if (!Number.isFinite(core.x)) continue;
+        if (core.visible === false) { el.style.display = 'none'; continue; }
+        const pos = Graph.graph2ScreenCoords(core.x, core.y, core.z);
+        // Keep every core name present; cores behind the camera are dimmed rather than hidden.
+        el.style.display = '';
+        el.style.opacity = pos.z > 1 ? '0.48' : '1';
+        // Place labels just outside each core. Radial offsets separate nearby labels and
+        // are recomputed from the live projection without frame-to-frame collision shuffling.
+        let dx = 0, dy = core.region === 0 ? 50 : 46;
+        if (core.region !== 0 && center) {
+          const angle = Math.atan2(pos.y - center.y, pos.x - center.x) + (core.region % 2 ? 0.14 : -0.14);
+          dx = Math.cos(angle) * 46;
+          dy = Math.sin(angle) * 46;
+        }
+        el.style.left = (pos.x + dx) + 'px';
+        el.style.top = (pos.y + dy) + 'px';
+      }
+    }
+
+    if (demo === 'brain') {
+    for (let i = 0; i < regions.length; i += 1) if (regions[i].initial) newCore(i);
+    }
+    updateHud();
+
+    Graph = ForceGraph3D()(document.getElementById('scene'))
+      .backgroundColor('rgba(2, 4, 10, 0)')
+      .graphData(graphData)
+      .nodeId('id')
+      .nodeLabel((node) => node.label || node.id)
+      .nodeColor((node) => node === selectedNode ? '#ffffff' : node.color || '#b5a2ff')
+      .nodeVal((node) => node.size || 2)
+      .nodeRelSize(2.7)
+      .nodeResolution(12)
+      .nodeOpacity(0.96)
+      .nodeVisibility((node) => node.visible !== false)
+      .linkColor((link) => link.color || '#8fb6ff')
+      .linkLabel((link) => link.label || '')
+      // ForceGraph accepts a numeric opacity; an accessor makes photon opacity NaN.
+      .linkOpacity(0.8)
+      .linkWidth(0)
+      .linkVisibility(false)
+      .linkDirectionalParticles(0)
+      .linkCurvature(0)
+      .onNodeDrag(startElasticDrag)
+      .onNodeDragEnd(endElasticDrag)
+      .enableNodeDrag(true);
+
+    Graph.onNodeClick((node) => {
+      if (node.core) {
+        const branchNodes = actualNodes.filter((item) => item.region === node.region && item._visible);
+        showBranch(node, branchNodes);
+      } else {
+        showNode(node, true);
+      }
+    });
+    const graphEffects = createGraphEffects(() => graphData);
+    const batchedFlow = createBatchedFlow(Graph, () => graphData);
+    Graph.renderer().setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.5));
+    Graph.onNodeHover((node) => {
+      graphEffects.setHover(node);
+      Graph.renderer().domElement.style.cursor = node ? 'pointer' : 'grab';
+    });
+
+    for (const force of ['charge', 'link', 'center']) Graph.d3Force(force, null);
+    Graph.cooldownTicks(Infinity).cooldownTime(Infinity);
+    const controls = Graph.controls();
+    controls.enableDamping = true;
+    controls.dampingFactor = 0.08;
+    controls.autoRotate = false;
+    controls.rotateSpeed = 0.9;
+    controls.zoomSpeed = 0.95;
+    controls.panSpeed = 1.1;
+    controls.screenSpacePanning = true;
+    controls.minDistance = 140;
+    controls.maxDistance = 3400;
+    controls.addEventListener('start', () => { userMovedCamera = true; });
+    if ('zoomToCursor' in controls) controls.zoomToCursor = true;
+    const graphCanvas = Graph.renderer().domElement;
+    graphCanvas.addEventListener('mousedown', (event) => { if (event.button === 1) event.preventDefault(); }, true);
+    graphCanvas.addEventListener('auxclick', (event) => { if (event.button === 1) event.preventDefault(); }, true);
+    graphCanvas.addEventListener('mouseup', (event) => { if (event.button === 1) event.preventDefault(); }, true);
+
+    Graph.cameraPosition({ x: 60, y: 180, z: 720 }, { x: 0, y: 0, z: 0 }, 0);
+
+    const glowObjects = [];
+    function addGlow() {
+      for (const node of graphData.nodes) {
+        const object = node.__threeObj;
+        if (!object || object.__glow || !object.material || (!node.core && !node.isSelfStar)) continue;
+        try {
+          if ((node.core || node.isSelfStar) && object.material.emissive) {
+            object.material.emissive.set(node.color);
+            object.material.emissiveIntensity = node.core ? 1.05 : 0.84;
+          }
+          const material = object.material.clone();
+          material.transparent = true;
+          material.opacity = node.core ? 0.38 : node.isSelfStar ? 0.3 : 0.11;
+          material.blending = 2;
+          material.depthWrite = false;
+          const halo = new object.constructor(object.geometry, material);
+          halo.scale.setScalar(node.core ? 3.3 : node.isSelfStar ? 2.6 : 1.7);
+          object.add(halo);
+          object.__glow = true;
+          glowObjects.push({ halo, base: halo.scale.x, phase: Math.random() * Math.PI * 2, core: node.core, selfStar: node.isSelfStar });
+        } catch (error) {
+          // 自定义节点对象不支持克隆时跳过
+        }
+      }
+    }
+
+    function fitView() {
+      const points = graphData.nodes.filter((node) => node.visible !== false && Number.isFinite(node.x));
+      if (!points.length) return;
+      const root = coreByRegion.get(0);
+      const center = root ? { x: root.x, y: root.y, z: root.z } : { x: 0, y: 0, z: 0 };
+      let radius = 0;
+      for (const node of points) radius = Math.max(radius, Math.hypot(node.x - center.x, node.y - center.y, node.z - center.z));
+      const distance = Math.max(1800, radius * 2.35);
+      homeDistance = distance;
+      document.getElementById('zoom-value').textContent = '100%';
+      const vertical = initialCameraOrientation.vertical;
+      const horizontal = Math.sqrt(1 - vertical * vertical);
+      Graph.cameraPosition({
+        x: center.x + Math.cos(initialCameraOrientation.yaw) * distance * horizontal,
+        y: center.y + distance * vertical,
+        z: center.z + Math.sin(initialCameraOrientation.yaw) * distance * horizontal,
+      }, center, 700);
+    }
+
+    let previousFrameTime = 0;
+    const camera = Graph.camera();
+    function frame(time) {
+      const dt = Math.min(50, previousFrameTime ? time - previousFrameTime : 16);
+      const running = motionEnabled && !document.hidden && currentView === 'graph';
+      const previousMotionSeconds = motionSeconds;
+      if (running) motionSeconds += dt / 1000;
+      controls.update();
+      const target = controls.target;
+      if (running) {
+        const pitch = Math.sin(motionSeconds * 0.3) * 26;
+        const previousPitch = Math.sin(previousMotionSeconds * 0.3) * 26;
+        camera.position.y += pitch - previousPitch;
+        {
+          const angle = dt * (0.000009 + 0.000002 * Math.sin(motionSeconds * 0.12));
+          const dx = camera.position.x - target.x;
+          const dz = camera.position.z - target.z;
+          const cosine = Math.cos(angle), sine = Math.sin(angle);
+          camera.position.x = target.x + dx * cosine - dz * sine;
+          camera.position.z = target.z + dx * sine + dz * cosine;
+        }
+      }
+      if (running) {
+        for (const node of graphData.nodes) {
+          updateBranchStar(node, coreByRegion.get(node.region), motionSeconds, dt / 1000);
+        }
+      }
+      camera.lookAt(target);
+      camera.updateMatrixWorld();
+      previousFrameTime = time;
+      updateLabels();
+      graphEffects.update(time, running);
+      if (currentView === 'graph') batchedFlow.update(motionSeconds);
+      if (running) for (const item of glowObjects) {
+        const amplitude = item.core ? 0.2 : item.selfStar ? 0.16 : 0.08;
+        const scale = item.base * (1 + amplitude * Math.sin(motionSeconds * (item.core ? 1.5 : 1.1) + item.phase));
+        item.halo.scale.setScalar(scale);
+      }
+      requestAnimationFrame(frame);
+    }
+    requestAnimationFrame(frame);
+    setTimeout(addGlow, 600);
+
+    buildSky();
+    drawSky(0);
+    animateSky();
+    bindWorkspace();
+    loadGroups();
+
+    let initialFitDone = false;
+    Graph.onEngineStop(updateLabels);
+    // demo injects realistic-sized batches through the same public ingestion boundary.
+    if (demo === 'brain') {
+      let seq = 0;
+      const inject = (index, count) => {
+        const batch = [];
+        for (let i = 0; i < count; i += 1) {
+          const region = regions[index];
+          const tag = region.tags[(seq + i * 7 + Math.floor(Math.random() * region.tags.length)) % region.tags.length];
+          batch.push({ region: index, tag, sequence: seq++ });
+        }
+        ingestMemories(batch);
+        if (!initialFitDone) { initialFitDone = true; setTimeout(fitView, 600); }
+      };
+      [0, 1, 2].forEach((index, slot) => setTimeout(() => inject(index, 20), 900 + slot * 170));
+      [3, 4, 5, 6].forEach((index, slot) => setTimeout(() => inject(index, regions[index].count), 4200 + slot * 2200));
+      [7, 8, 9].forEach((index, slot) => setTimeout(() => inject(index, regions[index].count), 13000 + slot * 2200));
+    } else {
+      loadLiveGraph();
+    }
+    setInterval(checkUpdates, 30000);
+    window.__graph = Graph;
+    window.ingestMemories = ingestMemories;
+    window.ensureCore = ensureCore;
+
+}
+try { startStarMap(); } catch (error) { showWebGLFallback(error); }
+</script>
+</body>
+</html>

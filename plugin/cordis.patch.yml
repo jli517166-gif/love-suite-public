@@ -1,0 +1,5 @@
+- insert:
+  - id: dsh-memory-network
+    name: dsh-memory-network
+    config:
+      enabled: true

@@ -1,0 +1,25 @@
+{
+  "name": "dsh-love-semantic",
+  "version": "0.1.0",
+  "description": "Local semantic retrieval for dsh-memory-network: Chinese/English embeddings with a local ONNX model, no cloud calls.",
+  "type": "module",
+  "main": "index.js",
+  "exports": {
+    ".": "./index.js",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "index.js",
+    "README.md"
+  ],
+  "keywords": [
+    "dsh-plugin",
+    "semantic-search",
+    "embeddings",
+    "local-first"
+  ],
+  "license": "MIT",
+  "dependencies": {
+    "@xenova/transformers": "^2.17.2"
+  }
+}

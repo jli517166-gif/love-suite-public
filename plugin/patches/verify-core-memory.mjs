@@ -1,0 +1,98 @@
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
+import vm from 'node:vm';
+process.env.LOVE_TEST_ISOLATED = '1';
+const { readCoreMemory, commitCoreMemory, coreMemoryFile } = await import('../core-memory.js');
+const { buildGraph, buildGroupGraph, buildAllGraph, graphStatus } = await import('../graph.js');
+const { exportMemory, importMemory } = await import('../backup.js');
+const { buildRecall, apply } = await import('../index.js');
+const workspace = fs.mkdtempSync(path.join(os.tmpdir(), 'love-core-check-'));
+const config = { workspace, workspaces: [], enabled: true, proactiveEnabled: false, heartbeatEnabled: false, channel: 'none', voiceChance: 0 };
+const memoryOp = (ref = '$memory', coreId = '$core') => ({ op: 'record_memory', ref, coreId, content: '我们一起完成了星图，遇到问题也一起修好了。', kind: 'reflection', epistemic: 'inferred', importance: 4, reason: '这段经历让我理解共同创作的意义', source: { kind: 'reflection', reference: 'test-session:message-1' } });
+const coreOp = (ref = '$core', title = '共同创作') => ({ op: 'create_core', ref, title, summary: '通过一起做事逐渐建立信任', reason: '我认为共同解决问题是一段持续经历', evidenceIds: ['$memory'] });
+try {
+  assert.equal(readCoreMemory(workspace).revision, 0);
+  assert.equal(fs.existsSync(coreMemoryFile(workspace)), false);
+  console.log('ok   核心记忆：读取空库不伪造或写入记忆');
+  const first = commitCoreMemory(workspace, { expectedRevision: 0, operations: [coreOp(), memoryOp()] }, { sessionId: 'test-session' });
+  const coreId = first.references.$core, memoryId = first.references.$memory;
+  assert.equal(readCoreMemory(workspace).memories[0].coreId, coreId);
+  assert.equal(readCoreMemory(workspace).cores[1].evidenceIds[0], memoryId);
+  console.log('ok   核心记忆：模型命名、前向引用与稳定 ID 原子保存');
+  const before = fs.readFileSync(coreMemoryFile(workspace), 'utf8');
+  assert.throws(() => commitCoreMemory(workspace, { expectedRevision: 0, operations: [memoryOp('$new', coreId)] }), /版本/);
+  assert.throws(() => commitCoreMemory(workspace, { expectedRevision: 1, operations: [{ op: 'update_core', id: coreId, title: '不应保存', reason: 'test' }, memoryOp('$bad', 'missing')] }), /归属/);
+  assert.equal(fs.readFileSync(coreMemoryFile(workspace), 'utf8'), before);
+  console.log('ok   核心记忆：陈旧版本和坏引用整批拒绝，不产生半写入');
+  assert.throws(() => commitCoreMemory(workspace, { expectedRevision: 1, operations: [{ op: 'archive', id: 'self', reason: 'test' }] }), /唯一/);
+  assert.throws(() => commitCoreMemory(workspace, { expectedRevision: 1, operations: [{ op: 'archive', id: coreId, reason: 'test' }] }), /归属/);
+  assert.throws(() => commitCoreMemory(workspace, { expectedRevision: 1, operations: [{ op: 'update_core', id: coreId, parentId: coreId, reason: 'test' }] }), /字段/);
+  console.log('ok   核心记忆：唯一自我、固定层级与归档约束');
+  assert.throws(() => commitCoreMemory(workspace, { expectedRevision: 1, operations: [{ ...memoryOp('$bad', coreId), content: '这只是我对那段经历的新推测。', epistemic: 'reported' }] }), /反思/);
+  assert.throws(() => commitCoreMemory(workspace, { expectedRevision: 1, operations: [coreOp('$duplicate')] }), /来源记忆/);
+  console.log('ok   核心记忆：推测不能写成事实，核心必须有有效依据');
+  assert.throws(() => commitCoreMemory(workspace, { expectedRevision: 1, operations: [memoryOp('$duplicate', coreId)] }), /相同记忆/);
+  const own = commitCoreMemory(workspace, { expectedRevision: 1, operations: [{ ...memoryOp('$self', 'self'), content: '我重视一起解决问题的过程。' }] });
+  const graph = await buildGraph(workspace);
+  assert.ok(graph.cores.some((item) => item.title === '共同创作'));
+  assert.ok(graph.nodes.some((item) => item.id === memoryId && item.coreId === coreId));
+  assert.ok(graph.nodes.some((item) => item.id === own.references.$self && item.coreId === 'self'));
+  const recall = await buildRecall(workspace, 7, { voiceChance: 0 }, '星图');
+  assert.match(recall, /共同创作/);
+  assert.match(recall, /test-session:message-1/);
+  console.log('ok   核心记忆：主图与召回读取模型核心、自我子星和来源');
+  const oldVersion = graphStatus(workspace).version;
+  commitCoreMemory(workspace, { expectedRevision: 0, operations: [coreOp(), memoryOp()] }, { groupId: '12345678' });
+  assert.equal(readCoreMemory(workspace).revision, 2);
+  assert.equal(readCoreMemory(workspace, '12345678').revision, 1);
+  assert.notEqual(graphStatus(workspace).version, oldVersion);
+  assert.equal((await buildGroupGraph(workspace, '12345678')).cores.length, 2);
+  const all = await buildAllGraph(workspace);
+  assert.ok(all.nodes.some((item) => item.coreId?.startsWith('g12345678:')));
+  console.log('ok   核心记忆：私聊与群聊隔离，更新版本与合并只读图正确');
+  const html = fs.readFileSync(new URL('../star/index.html', import.meta.url), 'utf8');
+  for (const script of html.matchAll(/<script\b[^>]*>([\s\S]*?)<\/script>/gi)) new vm.Script(script[1]);
+  const coreFunction = html.slice(html.indexOf('function newCore('), html.indexOf('function connectDemoCores('));
+  const buildFunction = html.slice(html.indexOf('function buildLiveGraph('), html.indexOf('async function loadLiveGraph('));
+  const noop = () => {};
+  const scene = { graphLoaded: false, liveMode: false, activeLayers: new Set(), query: '', selectedGroup: '', graphData: { nodes: [], links: [] }, glowObjects: [], branchPulls: new Map(), labels: [], labelBox: { replaceChildren: noop }, regionData: new Map(), coreByRegion: new Map(), usedCorePoints: [], actualNodes: [], actualLinks: [], selectedNode: null, regions: [], memorySequence: 0, allLayers: [], currentBrain: 'private', userMovedCamera: false, location: { search: '' }, URLSearchParams,
+    layerDetails: { fact: ['事实', '#fff'], soul: ['自我', '#ffd'] }, layerName: (name) => name, randomPoint: (index) => ({ x: index * 300, y: 0, z: 0 }), branchDirection3D: () => ({ x: 0, y: 1, z: 0 }), hashPhase: () => 0, addLabel: noop, setPanelState: noop, renderLayers: noop, renderTierGuide: noop, renderStats: noop, renderIndex: noop, updateCounts: noop, syncGraphData: noop, applyVisibility: noop, updateHud: noop, setTimeout: noop };
+  const rendered = { cores: [{ id: 'self' }, { id: 'c1', title: '共同创作' }, { id: 'g12345678:self', title: '群自我' }, { id: 'g12345678:c2', title: '群合作' }], nodes: [{ id: 's', coreId: 'self', layer: 'soul' }, { id: 'a', coreId: 'c1', layer: 'fact' }, { id: 'b', coreId: 'c1', layer: 'fact' }, { id: 'gs', coreId: 'g12345678:self', layer: 'soul' }, { id: 'g', coreId: 'g12345678:c2', layer: 'fact' }], links: [{ source: 'a', target: 'b' }, { source: 'a', target: 'g' }, { source: 'c1', target: 'g12345678:c2' }] };
+  const context = vm.createContext({ ...scene, input: rendered });
+  vm.runInContext(coreFunction + buildFunction + '\nbuildLiveGraph(input);', context);
+  assert.equal(context.actualNodes.find((node) => node.sourceId === 's').region, 0);
+  assert.notEqual(context.actualNodes.find((node) => node.sourceId === 'gs').region, 0);
+  assert.ok(context.graphData.links.some((link) => link.kind === 'memoryAssociation' && link.source.sourceId === 'a' && link.target.sourceId === 'b'));
+  const bridges = context.graphData.links.filter((link) => link.kind === 'coreAssociation');
+  assert.equal(bridges.length, 1);
+  assert.equal(bridges[0].relationCount, 2);
+  console.log('ok   核心记忆：主图实际转换保留群自我范围、星间关系及唯一核心汇总线');
+  const restored = fs.mkdtempSync(path.join(os.tmpdir(), 'love-core-import-'));
+  try {
+    importMemory(restored, exportMemory(workspace));
+    assert.equal(readCoreMemory(restored).revision, 2);
+    assert.equal(readCoreMemory(restored, '12345678').revision, 1);
+  } finally { assert.equal(path.dirname(restored), path.resolve(os.tmpdir())); fs.rmSync(restored, { recursive: true, force: true }); }
+  console.log('ok   核心记忆：私聊/群聊核心导入导出完整');
+  const tools = new Map();
+  const dispose = await apply({ tools: { register(tool) { tools.set(tool.name, tool); } }, on() {}, logger: { info() {}, warn() {} } }, config);
+  try {
+    const tool = tools.get('love_core_memory');
+    assert.ok(tool);
+    const result = await tool.execute({ action: 'read' }, { agent: { session: { id: 'test', header: { cwd: workspace } } } });
+    assert.equal(JSON.parse(result.text).revision, 2);
+    const groupResult = await tool.execute({ action: 'read' }, { agent: { session: { id: 'qq-group-12345678', header: { cwd: workspace } } } });
+    assert.equal(JSON.parse(groupResult.text).revision, 1);
+    await assert.rejects(() => tool.execute({ action: 'read' }, { agent: { session: { header: { cwd: path.dirname(workspace) } } } }), /只允许/);
+  } finally { dispose?.(); }
+  console.log('ok   核心记忆：模型工具注册、版本读取与工作区限制');
+  commitCoreMemory(workspace, { expectedRevision: 2, operations: [{ op: 'archive', id: memoryId, reason: '保留历史' }, { op: 'archive', id: coreId, reason: '保留历史' }] });
+  assert.equal(readCoreMemory(workspace).memories.find((item) => item.id === memoryId).status, 'archived');
+  assert.ok(fs.existsSync(path.join(workspace, 'memory', 'core-memory-history', '2.json')));
+  console.log('ok   核心记忆：归档保留历史，提交前版本快照存在');
+} finally {
+  assert.equal(path.dirname(workspace), path.resolve(os.tmpdir()));
+  fs.rmSync(workspace, { recursive: true, force: true });
+}
